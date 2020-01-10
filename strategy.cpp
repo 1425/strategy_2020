@@ -108,6 +108,16 @@ T max(multiset<T> const& a){
 	return r;
 }
 
+template<typename T,size_t N>
+T max(std::array<T,N> const& a){
+	static_assert(N);
+	T r=a[0];
+	for(auto i:range(size_t(1),N)){
+		r=max(r,a[i]);
+	}
+	return r;
+}
+
 template<typename T>
 T min(vector<T> const& a){
 	assert(a.size());
@@ -399,10 +409,40 @@ struct Robot_capabilities{
 	ROBOT_CAPABILITIES(INST)
 };
 
+/*
+climb strategy:
+1) all on own
+2) each one attempting to assist each of the others
+3) just park
+map<Team,park/climb/assisted_climb>
+*/
+
 std::ostream& operator<<(std::ostream& o,Robot_capabilities const& a){
 	o<<"Robot_capabilities(";
 	ROBOT_CAPABILITIES(SHOW)
-	nyi
+	return o<<")";
+}
+
+Robot_capabilities operator/(Robot_capabilities a,size_t n){
+	#define X(A,B) a.B/=n;
+	ROBOT_CAPABILITIES(X)
+	#undef X
+	return a;
+}
+
+Robot_capabilities operator+(Robot_capabilities const& a,Robot_capabilities const& b){
+	Robot_capabilities r;
+	#define X(A,B) r.B=a.B+b.B;
+	ROBOT_CAPABILITIES(X)
+	#undef X
+	return r;
+}
+
+bool operator<(Robot_capabilities const& a,Robot_capabilities const& b){
+	#define X(A,B) if(a.B<b.B) return 1; if(b.B<a.B) return 0;
+	ROBOT_CAPABILITIES(X)
+	#undef X
+	return 0;
 }
 
 Px wheel_odds(Team team,std::vector<std::vector<Input_row>> const& alliance_results){
@@ -524,8 +564,221 @@ std::vector<T> rand(std::vector<T> const*){
 	);
 }
 
-void show(std::vector<Robot_capabilities> const&){
-	nyi
+void show(std::map<Team,Robot_capabilities> const& data){
+	auto heading="Robot capabilities";
+	string s=html(
+		head(
+			title(heading)
+		)
+		+body(
+			h1(heading)
+			+tag("table border",
+				tr(
+					th("Team")
+					#define X(A,B) +th(""#B)
+					ROBOT_CAPABILITIES(X)
+					#undef X
+				)+
+				join(mapf(
+					[](auto x){
+						auto [team,data]=x;
+						return tr(
+							td(team)
+							#define X(A,B) +td(data.B)
+							ROBOT_CAPABILITIES(X)
+							#undef X
+						);
+					},
+					data
+				))
+			)
+		)
+	);
+	write_file("robot_capabilities.html",s);
+}
+
+template<typename Func,typename K,typename V>
+map<K,V> filter_keys(Func f,map<K,V> a){
+	map<K,V> r;
+	for(auto [k,v]:a){
+		if(f(k)){
+			r[k]=v;
+		}
+	}
+	return r;
+}
+
+using Alliance_capabilities=std::array<Robot_capabilities,3>;
+
+double expected_score(Alliance_capabilities const& a){
+	//at some point might want to make this fancier and do things like scoring rates based on the amount of time
+	//that might be used for the other activities
+	//also, it would be good if had some idea of what the distribution of # of balls was so that could estimate
+	//how likely it would be to get alliances to the different thresholds rather than just having a binary
+	//yes/no on them.
+	auto auto_low=sum(mapf([](auto x){ return x.auto_low; },a));
+	auto auto_outer=sum(mapf([](auto x){ return x.auto_outer; },a));
+	auto auto_inner=sum(mapf([](auto x){ return x.auto_inner; },a));
+	auto tele_low=sum(mapf([](auto x){ return x.tele_low; },a));
+	auto tele_outer=sum(mapf([](auto x){ return x.tele_outer; },a));
+	auto tele_inner=sum(mapf([](auto x){ return x.tele_inner; },a));
+
+	auto ball_points=2*auto_low+4*auto_outer+6*auto_inner+tele_low+tele_outer*2+tele_inner*3;
+	auto auto_balls=auto_low+auto_outer+auto_inner;
+	auto tele_balls=tele_low+tele_outer+tele_inner;
+	auto balls_towards_shield=min(auto_balls,9)+tele_balls;
+
+	auto spin_points=[&]()->double{
+		if(balls_towards_shield>TURN_THRESHOLD){
+			//probability of getting it is equal to probability for the team on your alliance that is best at it
+			auto p=max(mapf([](auto x){ return x.wheel_spin; },a));
+			return 10*p;
+		}
+		return 0;
+	}();
+
+	auto color_pick_points=[&]()->double{
+		if(balls_towards_shield>COLOR_PICK_THRESHOLD){
+			auto p=max(mapf([](auto x){ return x.wheel_color; },a));
+			return 20*p;
+		}
+		return 0;
+	}();
+
+	auto hang_points=0;//FIXME
+
+	return ball_points+spin_points+color_pick_points+hang_points;
+}
+
+template<typename K,typename V>
+map<K,V> without_key(K const& k,map<K,V> a){
+	a.erase(k);
+	return a;
+}
+
+template<typename K,typename V>
+set<K> keys(map<K,V> a){
+	return to_set(mapf(
+		[](auto p){ return p.first; },
+		a
+	));
+}
+
+using Picklist=vector<
+	pair<
+		pair<double,Team>,
+		vector<pair<double,Team>>
+	>
+>;
+
+void show_picklist(Team picker,Picklist const& a){
+	auto heading="Team "+as_string(picker)+" Picklist";
+
+	auto show_box=[](pair<double,Team> p)->string{
+		return td(
+			as_string(p.second)+"<br>"+tag("small",p.first)
+		);
+	};
+
+	auto s=html(
+		head(title(heading))
+		+body(
+			h1(heading)+
+			tag("table border",
+				tr(
+					tag("th colspan=2","First pick")+
+					th("Second pick")
+				)+
+				tr(
+					th("Rank")+
+					th("Team")+
+					join(mapf([](auto i){ return th(i); },range(1,23)))
+				)+
+				join(mapf(
+					[=](auto p){
+						auto [i,x]=p;
+						auto [fp,second]=x;
+						return tr(
+							th(i)
+							+show_box(fp)
+							+join(mapf(show_box,second))
+						);
+					},
+					enumerate_from(1,a)
+				))
+			)
+		)
+	);
+	write_file("picklist.html",s);
+}
+
+Picklist make_picklist(Team picking_team,map<Team,Robot_capabilities> a){
+	auto picking_cap=a[picking_team];
+	auto others=filter_keys(
+		[=](auto k){
+			return k!=picking_team;
+		},
+		a
+	);
+	
+	auto x=reversed(sorted(mapf(
+		[=](auto p){
+			auto [t1,t1_cap]=p;
+			Alliance_capabilities cap{picking_cap,t1_cap,{}};
+			return make_pair(expected_score(cap),t1_cap);
+		},
+		others
+	)));
+
+	auto ex_cap=[&]()->Robot_capabilities{
+		if(others.size()==0){
+			return {};
+		}
+		if(others.size()>24){
+			//take the 22nd-24th best robots as the example 3rd robot
+			return mean(take(5,skip(22,seconds(x))));
+		}
+		//if fewer than 24, then just take the bottom 5.
+		return mean(take(5,reversed(seconds(x))));
+	}();
+
+	cout<<"Example 3rd robot capabilities:\n";
+	cout<<ex_cap<<"\n";
+
+	auto first_picks=reversed(sorted(mapf(
+		[=](auto p){
+			auto [t1,t1_cap]=p;
+			Alliance_capabilities cap{picking_cap,t1_cap,ex_cap};
+			return make_pair(expected_score(cap),t1);
+		},
+		others
+	)));
+
+	PRINT(first_picks);
+
+	auto second_picks=to_map(mapf(
+		[&](auto t1)->pair<Team,vector<pair<double,Team>>>{
+			auto t1_cap=a[t1];
+			auto left=without_key(t1,others);
+			auto result=reversed(sorted(mapf(
+				[=](auto x){
+					auto [t2,t2_cap]=x;
+					Alliance_capabilities cap{picking_cap,t1_cap,t2_cap};
+					return make_pair(expected_score(cap),t2);
+				},
+				to_vec(left)
+			)));
+			return make_pair(t1,result);
+		},
+		to_vec(keys(others))
+	));
+
+	return mapf(
+		[&](auto p){
+			return make_pair(p,second_picks[p.second]);
+		},
+		first_picks
+	);
 }
 
 void run(Team team,std::optional<string> const& path){
@@ -543,11 +796,12 @@ void run(Team team,std::optional<string> const& path){
 	//check that the target team is in the data.
 	auto t=teams(data);
 	if(!t.count(team)){
-		cout<<"Did not find picking team in the data.  Aborting.\n";
-		exit(1);
+		cout<<"Warning: Did not find picking team in the data.  Adding zeros.\n";
+		rc[team]={};
 	}
 
-	nyi
+	auto list=make_picklist(team,rc);
+	show_picklist(team,list);
 }
 
 int main(int argc,char **argv){
