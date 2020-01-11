@@ -1,5 +1,7 @@
 #include<functional>
 #include "util.h"
+#include "int_limited.h"
+#include "dist.h"
 
 using namespace std;
 
@@ -11,42 +13,6 @@ using namespace std;
  * */
 
 //start generic code
-
-template<int MIN,int MAX>
-class Int_limited{
-	int i;
-
-	public:
-	Int_limited():i(MIN){}
-
-	explicit Int_limited(int value):i(value){
-		assert(value>=MIN && value<=MAX);
-	}
-
-	operator int()const{ return i; }
-
-	Int_limited operator--(int){
-		auto r=*this;
-		i--;
-		assert(i>=MIN);
-		return r;
-	}
-};
-
-template<int MIN,int MAX>
-Int_limited<MIN,MAX> parse(Int_limited<MIN,MAX> const*,std::string const&)nyi
-
-template<int MIN,int MAX>
-Int_limited<MIN,MAX> rand(Int_limited<MIN,MAX> const*){
-	return Int_limited<MIN,MAX>(MIN+rand()%(MAX-MIN+1));
-}
-
-template<int MIN,int MAX>
-int sum(vector<Int_limited<MIN,MAX>> const& a){
-	int r=0;
-	for(auto elem:a) r+=elem;
-	return r;
-}
 
 template<typename A,typename B>
 vector<A> firsts(vector<pair<A,B>> const& a){
@@ -175,81 +141,6 @@ vector<T> sort_by(vector<T> a,Func f){
 template<typename T>
 set<T> to_set(multiset<T> const& a){
 	return std::set<T>(begin(a),end(a));
-}
-
-using Px=double;//probability; should be 0-1.
-
-struct Dist:public map<unsigned,Px>{
-	//models a probability distribution with discrete outcomes.
-	Dist(){
-		(*this)[0]=1;
-	}
-};
-
-Dist mean(vector<Dist> const& a){
-	//just put in each of the items with a reduced probability.
-	Dist r;
-	if(a.size()){
-		r.clear();
-		for(auto d:a){
-			for(auto [v,p]:d){
-				r[v]+=p/a.size();
-			}
-		}
-	}
-	return r;
-}
-
-Dist operator+(Dist const& a,Dist const& b){
-	PRINT(sum(values(a)));
-	PRINT(sum(values(b)));
-
-	
-	Dist r;
-	r.clear();
-	for(auto [av,ap]:a){
-		for(auto [bv,bp]:b){
-			r[av+bv]+=ap*bp;
-		}
-	}
-	PRINT(sum(values(r)));
-	PRINT(r);
-	return r;
-}
-
-Dist to_dist(vector<unsigned> const& a){
-	Dist r;
-	if(a.empty()){
-		return r;
-	}
-
-	r.erase(0);
-	Px per_count=1.0/a.size();
-	for(auto elem:a){
-		r[elem]+=per_count;
-	}
-	return r;
-}
-
-template<size_t N>
-Dist sum(std::array<Dist,N>){
-	nyi
-}
-
-Dist min(unsigned a,Dist b){
-	Dist r;
-	for(auto [val,p]:b){
-		r[min(a,val)]+=p;
-	}
-	return r;
-}
-
-Px operator>=(Dist const& a,unsigned u){
-	auto f=filter(
-		[u](auto p){ return p.first>=u; },
-		to_vec(a)
-	);
-	return sum(seconds(f));
 }
 
 template<typename T>
