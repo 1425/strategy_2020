@@ -38,6 +38,7 @@ using Balls=Int_limited<0,100>;
 	X(Climb_assists,climb_assists)\
 	X(bool,climb_was_assisted)\
 	X(bool,park)\
+	X(bool,balanced)
 
 struct Input_row{
 	INPUT_DATA(INST)
