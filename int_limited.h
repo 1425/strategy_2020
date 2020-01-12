@@ -1,6 +1,10 @@
 #ifndef INT_LIMITED_H
 #define INT_LIMITED_H
 
+#include<cassert>
+#include<iosfwd>
+#include "util.h"
+
 template<int MIN,int MAX>
 class Int_limited{
 	int i;

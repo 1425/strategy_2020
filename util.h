@@ -660,4 +660,170 @@ bool operator<(std::bitset<N> a,std::bitset<N> b){
 	return a.to_ullong()<b.to_ullong();
 }
 
+int rand(int const*);
+bool rand(bool const*);
+unsigned rand(unsigned const*);
+
+template<typename A,typename B>
+std::vector<std::pair<std::optional<A>,std::optional<B>>> zip_extend(std::vector<A> const& a,std::vector<B> const& b){
+	auto a_at=begin(a);
+	auto b_at=begin(b);
+	auto a_end=end(a);
+	auto b_end=end(b);
+	std::vector<std::pair<std::optional<A>,std::optional<B>>> r;
+	while(a_at!=a_end || b_at!=b_end){
+		r|=make_pair(
+			[=]()->std::optional<A>{
+				if(a_at==a_end) return std::nullopt;
+				return *a_at;
+			}(),
+			[=]()->std::optional<B>{
+				if(b_at==b_end) return std::nullopt;
+				return *b_at;
+			}()
+		);
+		if(a_at!=a_end) a_at++;
+		if(b_at!=b_end) b_at++;
+	}
+	return r;
+}
+
+template<typename T>
+std::vector<std::pair<size_t,T>> enumerate(std::vector<T> const& a){
+	std::vector<std::pair<size_t,T>> r;
+	size_t i=0;
+	for(auto const& elem:a){
+		r|=make_pair(i++,elem);
+	}
+	return r;
+}
+
+int parse(int const*,std::string const&);
+bool parse(bool const*,std::string);
+unsigned parse(unsigned const*,std::string const&);
+
+template<typename A,typename B>
+std::vector<A> firsts(std::vector<std::pair<A,B>> const& a){
+	return mapf([](auto x){ return x.first; },a);
+}
+
+template<typename T>
+double mean_d(std::vector<T> v){
+	assert(v.size());
+	double x=sum(v);
+	return x/v.size();
+}
+
+template<typename K,typename V>
+std::map<K,V> to_map(std::vector<std::pair<K,V>> const& a){
+	std::map<K,V> r;
+	for(auto [k,v]:a) r[k]=v;
+	return r;
+}
+
+//int rand(int const*){ return rand(); }
+//bool rand(bool const*){ return rand()%2; }
+//unsigned rand(unsigned const*){ return rand(); }
+
+template<typename T>
+std::multiset<T> to_multiset(std::vector<T> const& a){
+	return std::multiset<T>(begin(a),end(a));
+}
+
+template<typename T>
+T max(std::multiset<T> const& a){
+	assert(a.size());
+	T r=*begin(a);
+	for(auto elem:a){
+		r=std::max(r,elem);
+	}
+	return r;
+}
+
+template<typename T,size_t N>
+T max(std::array<T,N> const& a){
+	static_assert(N);
+	T r=a[0];
+	for(auto i:range(size_t(1),N)){
+		r=std::max(r,a[i]);
+	}
+	return r;
+}
+
+template<typename T>
+T min(std::vector<T> const& a){
+	assert(a.size());
+	T r=*begin(a);
+	for(auto elem:a){
+		r=std::min(r,elem);
+	}
+	return r;
+}
+
+template<typename T>
+auto dist(std::vector<T> const& a){
+	auto m=to_multiset(a);
+	std::map<T,size_t> r;
+	for(auto elem:a){
+		r[elem]=m.count(elem);
+	}
+	return reversed(sorted(mapf(
+		[](auto a){
+			return std::make_pair(a.second,a.first);
+		},
+		r
+	)));
+}
+
+std::string take(size_t,std::string const&);
+
+template<typename Func,typename T>
+std::vector<T> sort_by(std::vector<T> a,Func f){
+	std::sort(begin(a),end(a),[&](auto x,auto y){ return f(x)<f(y); });
+	return a;
+}
+
+template<typename T>
+std::set<T> to_set(std::multiset<T> const& a){
+	return std::set<T>(begin(a),end(a));
+}
+
+template<typename T>
+std::vector<T> rand(std::vector<T> const*){
+	return mapf(
+		[](auto _){
+			(void)_;
+			return rand((T*)0);
+		},
+		range(rand()%100)
+	);
+}
+
+template<typename Func,typename K,typename V>
+std::map<K,V> filter_keys(Func f,std::map<K,V> a){
+	std::map<K,V> r;
+	for(auto [k,v]:a){
+		if(f(k)){
+			r[k]=v;
+		}
+	}
+	return r;
+}
+
+template<typename K,typename V>
+std::map<K,V> without_key(K const& k,std::map<K,V> a){
+	a.erase(k);
+	return a;
+}
+
+template<typename K,typename V>
+std::set<K> keys(std::map<K,V> a){
+	return to_set(mapf(
+		[](auto p){ return p.first; },
+		a
+	));
+}
+
+double mean(double,double);
+
 #endif

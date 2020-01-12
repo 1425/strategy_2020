@@ -127,3 +127,20 @@ void indent_by(unsigned int i){
 		std::cout<<"\t";
 	}
 }
+
+int rand(int const*){ return rand(); }
+bool rand(bool const*){ return rand()%2; }
+unsigned rand(unsigned const*){ return rand(); }
+
+double mean(double a,double b){
+	return (a+b)/2;
+}
+
+int parse(int const*,std::string const& s){
+	return stoi(s);
+}
+
+std::string take(size_t n,std::string const& s){
+	return s.substr(0,n);
+}
+
