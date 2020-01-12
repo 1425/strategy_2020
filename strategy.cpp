@@ -15,6 +15,28 @@
 
 using namespace std;
 
+template<typename T>
+vector<pair<T,bool>> mark_end(vector<T> a){
+	return mapf(
+		[=](auto p){
+			auto [i,v]=p;
+			return make_pair(v,i==a.size()-1);
+		},
+		enumerate(a)
+	);
+}
+
+string join(string delim,vector<string> const& a){
+	stringstream ss;
+	for(auto [elem,last]:mark_end(a)){
+		ss<<elem;
+		if(!last){
+			ss<<delim;
+		}
+	}
+	return ss.str();
+}
+
 //start program-specific code
 
 #define CLIMB_CAPABILITIES(X)\
@@ -455,25 +477,33 @@ double expected_score(Alliance_capabilities const& a){
 	auto tele_inner=sum(mapf([](auto x){ return x.tele_inner; },a));
 
 	auto ball_points=2*auto_low+4*auto_outer+6*auto_inner+tele_low+tele_outer*2+tele_inner*3;
-	auto auto_balls=auto_low+auto_outer+auto_inner;
-	auto tele_balls=tele_low+tele_outer+tele_inner;
-	auto balls_towards_shield=min(auto_balls,9)+tele_balls;
+	//auto auto_balls=auto_low+auto_outer+auto_inner;
+	//auto tele_balls=tele_low+tele_outer+tele_inner;
+	//auto balls_towards_shield=min(auto_balls,9)+tele_balls;
+
+	//Could worry about whether or not the teleop # of balls is correlated with the auto number of balls
+	//for example, if don't get certain shots off in auto then have the balls to shoot sooner in tele
+
+	auto [p_spin_available,p_color_available]=bonus_balls_hit(
+		mapf([](auto x){ return x.auto_ball_dist; },a),
+		mapf([](auto x){ return x.tele_ball_dist; },a)
+	);
 
 	auto spin_points=[&]()->double{
-		if(balls_towards_shield>TURN_THRESHOLD){
+		//if(balls_towards_shield>TURN_THRESHOLD){
 			//probability of getting it is equal to probability for the team on your alliance that is best at it
 			auto p=max(mapf([](auto x){ return x.wheel_spin; },a));
-			return 10*p;
-		}
-		return 0;
+			return 10*p*p_spin_available;
+		//}
+		//return 0;
 	}();
 
 	auto color_pick_points=[&]()->double{
-		if(balls_towards_shield>COLOR_PICK_THRESHOLD){
+		//if(balls_towards_shield>COLOR_PICK_THRESHOLD){
 			auto p=max(mapf([](auto x){ return x.wheel_color; },a));
-			return 20*p;
-		}
-		return 0;
+			return 20*p*p_color_available;
+		//}
+		//return 0;
 	}();
 
 	//hang points
@@ -538,7 +568,7 @@ void show_picklist(Team picker,Picklist const& a){
 							+join(mapf(show_box,take(22,second)))
 						);
 					},
-					enumerate_from(1,take(16,a))
+					enumerate_from(1,take(15,a))
 				))
 			)
 		)
@@ -616,12 +646,30 @@ Picklist make_picklist(Team picking_team,map<Team,Robot_capabilities> a){
 	);
 }
 
+void write_file(std::string const& path,std::vector<Input_row> const& data){
+	ofstream o(path);
+	vector<string> cols;
+	#define X(A,B) cols|=""#B;
+	INPUT_DATA(X)
+	#undef X
+	o<<join(",",cols)<<"\n";
+	for(auto row:data){
+		vector<string> items;
+		#define X(A,B) items|=as_string(row.B);
+		INPUT_DATA(X)
+		#undef X
+		o<<join(",",items)<<"\n";
+	}
+}
+
 void run(Team team,std::optional<string> const& path){
 	auto data=[=](){
 		if(path) return read_csv(*path);
 
 		//use random data if no path specified
-		return rand((std::vector<Input_row>*)0);
+		auto v=rand((std::vector<Input_row>*)0);
+		write_file("example.csv",v);
+		return read_csv("example.csv");
 	}();
 	sanity_check(data);
 

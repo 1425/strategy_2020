@@ -699,7 +699,7 @@ std::vector<std::pair<size_t,T>> enumerate(std::vector<T> const& a){
 }
 
 int parse(int const*,std::string const&);
-bool parse(bool const*,std::string);
+bool parse(bool const*,std::string const&);
 unsigned parse(unsigned const*,std::string const&);
 
 template<typename A,typename B>

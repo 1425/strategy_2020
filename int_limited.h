@@ -27,7 +27,9 @@ class Int_limited{
 };
 
 template<int MIN,int MAX>
-Int_limited<MIN,MAX> parse(Int_limited<MIN,MAX> const*,std::string const&)nyi
+Int_limited<MIN,MAX> parse(Int_limited<MIN,MAX> const*,std::string const& s){
+	return Int_limited<MIN,MAX>(stoi(s));
+}
 
 template<int MIN,int MAX>
 Int_limited<MIN,MAX> rand(Int_limited<MIN,MAX> const*){

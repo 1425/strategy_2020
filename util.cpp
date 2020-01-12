@@ -144,3 +144,8 @@ std::string take(size_t n,std::string const& s){
 	return s.substr(0,n);
 }
 
+bool parse(bool const*,std::string const& s){
+	if(s=="0") return 0;
+	if(s=="1") return 1;
+	throw "Unparsed bool: \""+s+"\"";
+}

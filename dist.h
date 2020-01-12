@@ -1,6 +1,8 @@
 #ifndef DIST_H
 #define DIST_H
 
+#include<map>
+
 using Px=double;//probability; should be 0-1.
 
 struct Dist:public std::map<unsigned,Px>{
@@ -25,10 +27,9 @@ Dist mean(std::vector<Dist> const& a){
 }
 
 Dist operator+(Dist const& a,Dist const& b){
-	PRINT(sum(values(a)));
-	PRINT(sum(values(b)));
+	//PRINT(sum(values(a)));
+	//PRINT(sum(values(b)));
 
-	
 	Dist r;
 	r.clear();
 	for(auto [av,ap]:a){
@@ -36,9 +37,13 @@ Dist operator+(Dist const& a,Dist const& b){
 			r[av+bv]+=ap*bp;
 		}
 	}
-	PRINT(sum(values(r)));
-	PRINT(r);
+	//PRINT(sum(values(r)));
+	//PRINT(r);
 	return r;
+}
+
+Dist& operator+=(Dist& a,Dist const& b){
+	return a=(a+b);
 }
 
 Dist to_dist(std::vector<unsigned> const& a){
@@ -56,8 +61,10 @@ Dist to_dist(std::vector<unsigned> const& a){
 }
 
 template<size_t N>
-Dist sum(std::array<Dist,N>){
-	nyi
+Dist sum(std::array<Dist,N> const& a){
+	Dist r;
+	for(auto elem:a) r+=elem;
+	return r;
 }
 
 Dist min(unsigned a,Dist b){
