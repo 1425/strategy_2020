@@ -5,10 +5,10 @@
 #include "input_data.h"
 
 /*To do list:
- * 1) output example input file
- * 2) make the availability of the bonus objectives probabilistic - joint probability distribution
- * 3) different strategies about who is climbing effects time to do other things
- * 4) Improve quality of random robot match data
+ * 1) different strategies about who is climbing effects time to do other things
+ * 2) Improve quality of random robot match data
+ * 3) Make the climb being balanced do something
+ * 4) Check for consistency of the thing being balanced on input data
  * */
 
 //start generic code
@@ -297,7 +297,7 @@ unsigned climb_assists_rx(vector<Input_row> const& a){
 
 std::vector<Input_row> rand(std::vector<Input_row> const*){
 	std::vector<Input_row> r;
-	for(auto match:range(1,50)){
+	for(auto match:range(1,80)){
 		std::vector<Input_row> match_data;
 		for(auto alliance:alliances()){
 			auto v=mapf(
@@ -490,20 +490,13 @@ double expected_score(Alliance_capabilities const& a){
 	);
 
 	auto spin_points=[&]()->double{
-		//if(balls_towards_shield>TURN_THRESHOLD){
-			//probability of getting it is equal to probability for the team on your alliance that is best at it
-			auto p=max(mapf([](auto x){ return x.wheel_spin; },a));
-			return 10*p*p_spin_available;
-		//}
-		//return 0;
+		auto p=max(mapf([](auto x){ return x.wheel_spin; },a));
+		return 10*p*p_spin_available;
 	}();
 
 	auto color_pick_points=[&]()->double{
-		//if(balls_towards_shield>COLOR_PICK_THRESHOLD){
-			auto p=max(mapf([](auto x){ return x.wheel_color; },a));
-			return 20*p*p_color_available;
-		//}
-		//return 0;
+		auto p=max(mapf([](auto x){ return x.wheel_color; },a));
+		return 20*p*p_color_available;
 	}();
 
 	//hang points
