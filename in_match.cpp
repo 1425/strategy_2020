@@ -190,6 +190,7 @@ static const int MAX_BALLS_HELD=5;
 
 #define ROBOT_ACTIONS(X)\
 	X(PICKUP)\
+	X(LOAD_STATION)\
 	X(SHOOT1)\
 	X(SHOOT2)\
 	X(SHOOT3)\
@@ -346,6 +347,13 @@ pair<map<Alliance_station,Robot_action>,Game_state> next(Game_state in,Strategy 
 					//if in transit, do not allow pickup
 				}
 				break;
+			case Robot_action::LOAD_STATION:
+				if(robot.balls_held>=MAX_BALLS_HELD) break;
+				if(!on_near_end(robot.location)) break;
+				if(in.driver_station_balls[location.alliance]==0) break;
+				robot.balls_held++;
+				in.driver_station_balls[location.alliance]--;
+				break;
 			case Robot_action::DRIVE_TO_SHOOTING_END:
 				//assert(!robot.at_shooting_end);
 				//robot.at_shooting_end=1;
@@ -488,6 +496,72 @@ Robot_action always_cycle(Robot_state state,int ball_shooting_end,int ball_own_e
 	return Robot_action::DRIVE_TO_OWN_END;
 }
 
+Robot_action always_cycle1(Robot_state state,int ball_shooting_end,int ball_own_end){
+	(void)ball_shooting_end;
+	(void)ball_own_end;
+
+	if(at_shooting_end(state.location)){
+		if(state.balls_held){
+			return Robot_action::SHOOT1;
+		}
+		return Robot_action::DRIVE_TO_OWN_END;
+	}
+	if(on_near_end(state.location)){
+		if(state.balls_held==MAX_BALLS_HELD){
+			return Robot_action::DRIVE_TO_SHOOTING_END;
+		}
+		return Robot_action::PICKUP;
+	}
+	if(state.balls_held){
+		return Robot_action::DRIVE_TO_SHOOTING_END;
+	}
+	return Robot_action::DRIVE_TO_OWN_END;
+}
+
+Robot_action always_load(Robot_state state,int ball_shooting_end,int ball_own_end){
+	(void)ball_shooting_end;
+	(void)ball_own_end;
+
+	if(at_shooting_end(state.location)){
+		if(state.balls_held){
+			return Robot_action::SHOOT3;
+		}
+		return Robot_action::DRIVE_TO_OWN_END;
+	}
+	if(on_near_end(state.location)){
+		if(state.balls_held==MAX_BALLS_HELD){
+			return Robot_action::DRIVE_TO_SHOOTING_END;
+		}
+		return Robot_action::LOAD_STATION;
+	}
+	if(state.balls_held){
+		return Robot_action::DRIVE_TO_SHOOTING_END;
+	}
+	return Robot_action::DRIVE_TO_OWN_END;
+}
+
+Robot_action always_load1(Robot_state state,int ball_shooting_end,int ball_own_end){
+	(void)ball_shooting_end;
+	(void)ball_own_end;
+
+	if(at_shooting_end(state.location)){
+		if(state.balls_held){
+			return Robot_action::SHOOT1;
+		}
+		return Robot_action::DRIVE_TO_OWN_END;
+	}
+	if(on_near_end(state.location)){
+		if(state.balls_held==MAX_BALLS_HELD){
+			return Robot_action::DRIVE_TO_SHOOTING_END;
+		}
+		return Robot_action::LOAD_STATION;
+	}
+	if(state.balls_held){
+		return Robot_action::DRIVE_TO_SHOOTING_END;
+	}
+	return Robot_action::DRIVE_TO_OWN_END;
+}
+
 using Log=std::vector<std::map<Alliance_station,Robot_action>>;
 
 template<typename Func,typename T>
@@ -593,7 +667,10 @@ void tournament(){
 		{"choose_action",choose_action},
 		{"Full_loader",Full_loader{}},
 		{"Full_cycle",Full_cycle{}},
-		{"always_cycle",always_cycle}
+		{"always_cycle",always_cycle},
+		{"always_load",always_load},
+		{"ac1",always_cycle1},
+		{"al1",always_load1}
 	};
 
 	//with 4 different robot types, there should be 4096 different matchups
