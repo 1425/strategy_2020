@@ -15,6 +15,7 @@ enum class Alliance{RED,BLUE};
 
 std::ostream& operator<<(std::ostream&,Alliance);
 Alliance parse(Alliance const*,std::string const&);
+std::array<Alliance,2> options(Alliance const*);
 Alliance rand(Alliance const*);
 std::vector<Alliance> alliances();
 

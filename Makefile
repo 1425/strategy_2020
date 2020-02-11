@@ -5,6 +5,8 @@ test: strategy
 
 strategy: util.o input_data.o
 
+in_match: input_data.o util.o
+
 .PHONY: clean
 clean:
 	rm -f *.o

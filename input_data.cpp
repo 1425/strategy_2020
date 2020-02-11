@@ -22,6 +22,10 @@ Alliance parse(Alliance const*,std::string const& a){
 	throw "Invalid alliance: \""+a+"\"";
 }
 
+std::array<Alliance,2> options(Alliance const*){
+	return {Alliance::RED,Alliance::BLUE};
+}
+
 Alliance rand(Alliance const*){
 	return (rand()%2)?Alliance::RED:Alliance::BLUE;
 }

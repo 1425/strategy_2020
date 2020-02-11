@@ -112,6 +112,11 @@ size_t sum(std::vector<bool> const& a){
 	return r;
 }
 
+float mean(std::vector<bool> const& a){
+	assert(a.size());
+	return (0.0+sum(a))/a.size();
+}
+
 std::string pop(std::vector<std::string>& v){
 	//warning! this is O(n) and modifies its argument
 	assert(v.size());

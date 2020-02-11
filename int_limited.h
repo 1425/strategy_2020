@@ -32,6 +32,14 @@ Int_limited<MIN,MAX> parse(Int_limited<MIN,MAX> const*,std::string const& s){
 }
 
 template<int MIN,int MAX>
+std::vector<Int_limited<MIN,MAX>> options(Int_limited<MIN,MAX> const*){
+	return mapf(
+		[](auto x){ return Int_limited<MIN,MAX>(x); },
+		range(MIN,MAX+1)
+	);
+}
+
+template<int MIN,int MAX>
 Int_limited<MIN,MAX> rand(Int_limited<MIN,MAX> const*){
 	return Int_limited<MIN,MAX>(MIN+rand()%(MAX-MIN+1));
 }

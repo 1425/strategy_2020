@@ -138,9 +138,16 @@ T sum(std::vector<T> v){
 }
 
 template<typename T>
+T max(std::vector<T> const& a){
+	assert(a.size());
+	return *std::max_element(begin(a),end(a));
+}
+
+template<typename T>
 T mean(std::vector<T> v){
 	assert(v.size());
-	return sum(v)/v.size();
+	//The cast is here to avoid making the sum get converted to unsigned.
+	return sum(v)/(int)v.size();
 }
 
 template<typename A,typename B>
@@ -223,12 +230,6 @@ template<typename T>
 class Nonempty_vector{
 	std::vector<T> data;
 };
-
-template<typename T>
-T max(std::vector<T> const& a){
-	assert(a.size());
-	return *std::max_element(begin(a),end(a));
-}
 
 template<typename T>
 std::string as_string(T const& t){
