@@ -213,6 +213,13 @@ Px balance(std::vector<Input_row> const& matches){
 	return (0.0+successes)/attempts;
 }
 
+bool attempted_endgame(Input_row const& a){
+	return a.climb_assists || a.climb_was_assisted || a.park;
+}
+
+static const int TELEOP_LENGTH=135;
+static const int ENDGAME_LENGTH=20;//going to assume that people only spend 20 of the 30 seconds trying to climb.
+
 std::map<Team,Robot_capabilities> robot_capabilities(std::vector<Input_row> const& in){
 	std::vector<std::vector<Input_row>> alliance_results=values(group(
 		[](auto x){ return std::make_pair(x.match,x.alliance); },
@@ -240,6 +247,10 @@ std::map<Team,Robot_capabilities> robot_capabilities(std::vector<Input_row> cons
 			auto tele_outer=tele_high*(1-inner_odds);
 			auto tele_inner=tele_high*inner_odds;
 
+			auto px_endgame=mean_d(mapf(attempted_endgame,f));
+			//so that we calculate what we think they would score if they didn't take up the time in doing the endgame.
+			auto time_conversion_factor=TELEOP_LENGTH/(TELEOP_LENGTH*(1-px_endgame)+(TELEOP_LENGTH-ENDGAME_LENGTH)*px_endgame);
+
 			return std::make_pair(
 				team,
 				Robot_capabilities{
@@ -247,9 +258,9 @@ std::map<Team,Robot_capabilities> robot_capabilities(std::vector<Input_row> cons
 					mean_d(mapf([](auto x){ return x.auto_low; },f)),
 					auto_outer, //mean_d(mapf([](auto x){ return x.auto_outer; },f)),
 					auto_inner, //mean_d(mapf([](auto x){ return x.auto_inner; },f)),
-					mean_d(mapf([](auto x){ return x.tele_low; },f)),
-					tele_outer, //mean_d(mapf([](auto x){ return x.tele_outer; },f)),
-					tele_inner, //mean_d(mapf([](auto x){ return x.tele_inner; },f)),
+					time_conversion_factor*mean_d(mapf([](auto x){ return x.tele_low; },f)),
+					time_conversion_factor*tele_outer, //mean_d(mapf([](auto x){ return x.tele_outer; },f)),
+					time_conversion_factor*tele_inner, //mean_d(mapf([](auto x){ return x.tele_inner; },f)),
 					to_dist(mapf(
 						[](auto x)->unsigned{
 							//return x.auto_low+x.auto_outer+x.auto_inner;

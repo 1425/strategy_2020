@@ -28,6 +28,25 @@ std::vector<std::string> operator+(std::vector<const char *> const& a,std::vecto
 
 #define CTOR(A) [](auto x){ return (A)(x); }
 
+template<typename T,size_t N>
+std::vector<T> to_vec(std::array<T,N> const& a){
+	std::vector<T> r;
+	for(auto elem:a){
+		r|=elem;
+	}
+	return r;
+}
+
+template<typename T,size_t N>
+string join(std::array<T,N> const& a){
+	return join(to_vec(a));
+}
+
+template<typename T,size_t N>
+auto mean(std::array<T,N> const& a){
+	return mean(to_vec(a));
+}
+
 //start program-specific code
 
 string preview(double d){
@@ -39,13 +58,24 @@ string preview(double d){
 
 string preview(Dist d){ return preview(mean(d)); }
 
-auto expected_score(std::vector<Robot_capabilities> const& a){
+Alliance_capabilities to_alliance(std::vector<Robot_capabilities> const& a){
 	Alliance_capabilities alliance{};
 	assert(a.size()<=3);
 	for(auto [i,x]:enumerate(a)){
 		alliance[i]=x;
 	}
-	return expected_score(alliance);
+	return alliance;
+}
+
+auto expected_score(std::vector<Robot_capabilities> const& a){
+	return expected_score(to_alliance(a));
+}
+
+Alliance_strategy best_strategy(Alliance_capabilities const& cap){
+	return argmax(
+		[=](auto strat){ return expected_score(cap,strat); },
+		alliance_climb_strategies()
+	);
 }
 
 int main(int argc,char **argv){
@@ -76,8 +106,8 @@ int main(int argc,char **argv){
 	auto rc=robot_capabilities(data);
 
 	//show matchup for just this match
-	auto reds=mapf([&](auto team){ return rc[team]; },red);
-	auto blues=mapf([&](auto team){ return rc[team]; },blue);
+	auto reds=to_alliance(mapf([&](auto team){ return rc[team]; },red));
+	auto blues=to_alliance(mapf([&](auto team){ return rc[team]; },blue));
 	
 	ofstream f("preview.html");
 	f<<"<html>";
@@ -106,6 +136,12 @@ int main(int argc,char **argv){
 	f<<th("Score estimate");
 	f<<td(expected_score(blues));
 	f<<join(mapf([](auto x){ return td(expected_score(vector{x})); },blues));
+	f<<"</tr>";
+	f<<"<tr>";
+	auto red_strat=best_strategy(reds);
+	f<<join(MAP(td,red_strat));
+	f<<td("")+th("Optimal Climb Strategy");
+	f<<td("")+join(MAP(td,best_strategy(blues)));
 	f<<"</tr>";
 	f<<"</table>";
 	f<<"</body>";

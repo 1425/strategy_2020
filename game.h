@@ -149,7 +149,9 @@ double climb_points(Alliance_climb_capabilities const& cap){
 	));
 }
 
-double expected_score(Alliance_capabilities const& a){
+using Alliance_strategy=Alliance_climb_strategy;
+
+double expected_score(Alliance_capabilities const& a,Alliance_strategy const& strat){
 	//at some point might want to make this fancier and do things like scoring rates based on the amount of time
 	//that might be used for the other activities
 	//also, it would be good if had some idea of what the distribution of # of balls was so that could estimate
@@ -160,9 +162,22 @@ double expected_score(Alliance_capabilities const& a){
 	auto auto_low=sum(mapf([](auto x){ return x.auto_low; },a));
 	auto auto_outer=sum(mapf([](auto x){ return x.auto_outer; },a));
 	auto auto_inner=sum(mapf([](auto x){ return x.auto_inner; },a));
-	auto tele_low=sum(mapf([](auto x){ return x.tele_low; },a));
-	auto tele_outer=sum(mapf([](auto x){ return x.tele_outer; },a));
-	auto tele_inner=sum(mapf([](auto x){ return x.tele_inner; },a));
+
+	auto sum_scaled=[=](std::array<double,3> a)->double{
+		double r=0;
+		for(auto [value,climb]:zip(a,strat)){
+			if(climb==Climb_strategy::NONE){
+				r+=value;
+			}else{
+				static const double SCALE_FACTOR=(TELEOP_LENGTH-ENDGAME_LENGTH+0.0)/TELEOP_LENGTH;
+				r+=value*SCALE_FACTOR;
+			}
+		}
+		return r;
+	};
+	auto tele_low=sum_scaled(mapf([](auto x){ return x.tele_low; },a));
+	auto tele_outer=sum_scaled(mapf([](auto x){ return x.tele_outer; },a));
+	auto tele_inner=sum_scaled(mapf([](auto x){ return x.tele_inner; },a));
 
 	auto ball_points=2*auto_low+4*auto_outer+6*auto_inner+tele_low+tele_outer*2+tele_inner*3;
 	//auto auto_balls=auto_low+auto_outer+auto_inner;
@@ -203,10 +218,18 @@ double expected_score(Alliance_capabilities const& a){
 				return r;
 			},
 			a
-		)
+		),
+		strat
 	);
 
 	return auto_line_points+ball_points+spin_points+color_pick_points+hang_points;
+}
+
+double expected_score(Alliance_capabilities const& a){
+	return max(mapf(
+		[=](auto x){ return expected_score(a,x); },
+		alliance_climb_strategies()
+	));
 }
 
 #endif

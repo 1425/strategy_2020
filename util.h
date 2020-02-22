@@ -848,4 +848,19 @@ std::vector<T> cdr(std::vector<T> a){
 double product(std::vector<double> const&);
 double geomean(std::vector<double> const&);
 
+template<typename Func,typename T>
+T argmax(Func f,std::vector<T> const& a){
+	assert(a.size());
+	auto x=f(a[0]);
+	T r=a[0];
+	for(auto elem:cdr(a)){
+		auto x1=f(elem);
+		if(x1>x){
+			x=x1;
+			r=elem;
+		}
+	}
+	return r;
+}
+
 #endif

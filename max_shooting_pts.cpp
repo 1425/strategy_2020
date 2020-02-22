@@ -115,21 +115,6 @@ double expected_inner_points(
 	return 3*px;
 }
 
-template<typename Func,typename T>
-T argmax(Func f,vector<T> const& a){
-	assert(a.size());
-	auto x=f(a[0]);
-	T r=a[0];
-	for(auto elem:cdr(a)){
-		auto x1=f(elem);
-		if(x1>x){
-			x=x1;
-			r=elem;
-		}
-	}
-	return r;
-}
-
 double expected_points(
 	Degrees theta,
 	Inch sigma_x,
