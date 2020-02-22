@@ -119,6 +119,17 @@ std::vector<T> range(T start,T lim){
 	return r;
 }
 
+
+template<typename T,typename STEP>
+std::vector<T> range(T start,T lim,STEP step){
+	assert(lim>=start);
+	std::vector<T> r;
+	for(auto i=start;i<lim;i+=step){
+		r|=i;
+	}
+	return r;
+}
+
 void write_file(std::string filename,std::string data);
 int min(int a,unsigned b);
 char as_hex_digit(int);

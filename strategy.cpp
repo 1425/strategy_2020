@@ -533,7 +533,12 @@ void show_picklist(Team picker,Picklist const& a){
 
 	auto show_box=[](pair<double,Team> p)->string{
 		return td(
-			as_string(p.second)+"<br>"+tag("small",p.first)
+			as_string(p.second)
+			+"<br>"
+			+tag(
+				"small",
+				tag("font color=grey",p.first)
+			)
 		);
 	};
 
@@ -706,7 +711,7 @@ int main(int argc,char **argv){
 			std::function<int(vector<string>&)>(set_team)
 		),
 		make_tuple(
-			"--file","<PATH>","Create picklist for the given team number",
+			"--file","<PATH>","Input data file",
 			std::function<int(vector<string>&)>(set_path)
 		)
 	};
