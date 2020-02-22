@@ -1,4 +1,5 @@
 #include<functional>
+#include<cmath>
 #include "util.h"
 #include "int_limited.h"
 #include "dist.h"
@@ -16,7 +17,7 @@
 using namespace std;
 
 template<typename T>
-vector<pair<T,bool>> mark_end(vector<T> a){
+std::vector<std::pair<T,bool>> mark_end(std::vector<T> a){
 	return mapf(
 		[=](auto p){
 			auto [i,v]=p;
@@ -26,8 +27,8 @@ vector<pair<T,bool>> mark_end(vector<T> a){
 	);
 }
 
-string join(string delim,vector<string> const& a){
-	stringstream ss;
+std::string join(std::string delim,std::vector<std::string> const& a){
+	std::stringstream ss;
 	for(auto [elem,last]:mark_end(a)){
 		ss<<elem;
 		if(!last){
@@ -37,6 +38,17 @@ string join(string delim,vector<string> const& a){
 	return ss.str();
 }
 
+double product(std::vector<double> const& a){
+	double r=1;
+	for(auto elem:a) r*=elem;
+	return r;
+}
+
+double geomean(std::vector<double> const& a){
+	assert(a.size());
+	return pow(product(a),1.0/a.size());
+}
+
 //start program-specific code
 
 #define CLIMB_CAPABILITIES(X)\
@@ -44,7 +56,8 @@ string join(string delim,vector<string> const& a){
 	X(Px,assist2)\
 	X(Px,assist1)\
 	X(Px,climb_was_assisted)\
-	X(Px,park)
+	X(Px,park)\
+	X(Px,balance)
 
 #define ROBOT_CAPABILITIES(X)\
 	X(Px,auto_line)\
@@ -235,6 +248,19 @@ Px park(std::vector<Input_row> const& a){
 	return (done+0.0)/available;
 }
 
+Px balance(std::vector<Input_row> const& matches){
+	unsigned attempts=0;
+	unsigned successes=0;
+	for(auto match:matches){
+		if(match.climbed&&!match.climb_was_assisted){
+			attempts+=1;
+			if(match.balanced) successes+=1;
+		}
+	}
+	if(attempts==0) return 0;
+	return (0.0+successes)/attempts;
+}
+
 map<Team,Robot_capabilities> robot_capabilities(vector<Input_row> const& in){
 	vector<vector<Input_row>> alliance_results=values(group(
 		[](auto x){ return make_pair(x.match,x.alliance); },
@@ -275,7 +301,8 @@ map<Team,Robot_capabilities> robot_capabilities(vector<Input_row> const& in){
 					assisted2(team,this_alliance),
 					assisted1(team,this_alliance),
 					mean_d(mapf([](auto x){ return x.climbed && x.climb_was_assisted; },f)),//climb was assisted
-					park(f) //park
+					park(f),
+					balance(f)
 				}
 			);
 		},
@@ -428,6 +455,7 @@ double climb_points(Alliance_climb_capabilities const& cap,Alliance_climb_strate
 	vector<double> assists_available;
 	vector<double> assists_req;
 	double climbed=0;
+	vector<Px> balancers;
 	for(auto [cap1,strat1]:z){
 		switch(strat1){
 			case NONE:
@@ -437,6 +465,7 @@ double climb_points(Alliance_climb_capabilities const& cap,Alliance_climb_strate
 				break;
 			case CLIMB_SELF:
 				climbed+=cap1.climb_unassisted;
+				balancers|=cap1.balance;
 				break;
 			case CLIMB_ASSISTED:
 				assists_req|=cap1.climb_was_assisted;
@@ -451,7 +480,8 @@ double climb_points(Alliance_climb_capabilities const& cap,Alliance_climb_strate
 	)){
 		climbed+=mean(a,b);//geometric mean might be better
 	}
-	return park_points+climbed*25;
+	auto balance_points=balancers.empty()?0:(15*geomean(balancers));
+	return park_points+climbed*25+balance_points;
 }
 
 double climb_points(Alliance_climb_capabilities const& cap){
