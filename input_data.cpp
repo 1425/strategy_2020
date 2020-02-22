@@ -111,7 +111,8 @@ std::vector<Input_row> read_csv(std::string const& path){
 //static const int COLOR_PICK_THRESHOLD=49;
 
 unsigned balls_scored_auto(Input_row const& a){
-	return a.auto_low+a.auto_outer+a.auto_inner;
+	//return a.auto_low+a.auto_outer+a.auto_inner;
+	return a.auto_low+a.auto_high;
 }
 
 unsigned balls_scored_auto(std::vector<Input_row> const& a){
@@ -119,7 +120,8 @@ unsigned balls_scored_auto(std::vector<Input_row> const& a){
 }
 
 unsigned balls_scored_tele(Input_row const& a){
-	return a.tele_low+a.tele_outer+a.tele_inner;
+	//return a.tele_low+a.tele_outer+a.tele_inner;
+	return a.tele_low+a.tele_high;
 }
 
 unsigned balls_scored_tele(std::vector<Input_row> const& a){

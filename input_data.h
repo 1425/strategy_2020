@@ -28,11 +28,9 @@ using Balls=Int_limited<0,100>;
 	X(Alliance,alliance)\
 	X(bool,auto_line)\
 	X(Balls,auto_low)\
-	X(Balls,auto_outer)\
-	X(Balls,auto_inner)\
+	X(Balls,auto_high)\
 	X(Balls,tele_low)\
-	X(Balls,tele_outer)\
-	X(Balls,tele_inner)\
+	X(Balls,tele_high)\
 	X(bool,wheel_spin)\
 	X(bool,wheel_color)\
 	X(bool,climbed)\

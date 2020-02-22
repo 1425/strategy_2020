@@ -277,22 +277,39 @@ map<Team,Robot_capabilities> robot_capabilities(vector<Input_row> const& in){
 				[team](auto x){ return teams(x).count(team); },
 				alliance_results
 			);
+
+			//This chunk of code exists because the scouting team doesn't think that they are
+			//going to be able to see which balls go in which port for the first event
+			auto auto_high=mean_d(mapf([](auto x){ return x.auto_high; },f));
+			auto tele_high=mean_d(mapf([](auto x){ return x.tele_high; },f));
+			static const Px inner_odds=.2;
+			auto auto_outer=auto_high*(1-inner_odds);
+			auto auto_inner=auto_high*inner_odds;
+			auto tele_outer=tele_high*(1-inner_odds);
+			auto tele_inner=tele_high*inner_odds;
+
 			return make_pair(
 				team,
 				Robot_capabilities{
 					mean_d(mapf([](auto x){ return x.auto_line; },f)),
 					mean_d(mapf([](auto x){ return x.auto_low; },f)),
-					mean_d(mapf([](auto x){ return x.auto_outer; },f)),
-					mean_d(mapf([](auto x){ return x.auto_inner; },f)),
+					auto_outer, //mean_d(mapf([](auto x){ return x.auto_outer; },f)),
+					auto_inner, //mean_d(mapf([](auto x){ return x.auto_inner; },f)),
 					mean_d(mapf([](auto x){ return x.tele_low; },f)),
-					mean_d(mapf([](auto x){ return x.tele_outer; },f)),
-					mean_d(mapf([](auto x){ return x.tele_inner; },f)),
+					tele_outer, //mean_d(mapf([](auto x){ return x.tele_outer; },f)),
+					tele_inner, //mean_d(mapf([](auto x){ return x.tele_inner; },f)),
 					to_dist(mapf(
-						[](auto x)->unsigned{ return x.auto_low+x.auto_outer+x.auto_inner; },
+						[](auto x)->unsigned{
+							//return x.auto_low+x.auto_outer+x.auto_inner;
+							return x.auto_low+x.auto_high;
+						},
 						f
 					)),
 					to_dist(mapf(
-						[](auto x)->unsigned{ return x.tele_low+x.tele_outer+x.tele_inner; },
+						[](auto x)->unsigned{
+							//return x.tele_low+x.tele_outer+x.tele_inner;
+							return x.tele_low+x.tele_high;
+						},
 						f
 					)),
 					wheel_odds(team,this_alliance),
