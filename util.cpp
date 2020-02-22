@@ -54,9 +54,21 @@ std::string first_word(std::string const& s){
 	return s.substr(0,f);
 }
 
-std::string join(std::vector<std::string> a){
+std::string join(std::vector<std::string> const& a){
 	std::stringstream ss;
-	for(auto elem:a) ss<<elem;
+	for(auto const& elem:a) ss<<elem;
+	return ss.str();
+}
+
+std::string join(std::string const& delim,std::vector<std::string> const& a){
+	std::stringstream ss;
+	auto e=end(a);
+	for(auto at=begin(a);at!=e;at++){
+		ss<<*at;
+		if(at+1!=e){
+			ss<<delim;
+		}
+	}
 	return ss.str();
 }
 

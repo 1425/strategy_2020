@@ -6,6 +6,8 @@
 
 using namespace std;
 
+//start generic code
+
 template<typename T>
 auto tail(T t){ return cdr(t); }
 
@@ -25,6 +27,8 @@ std::vector<std::string> operator+(std::vector<const char *> const& a,std::vecto
 }
 
 #define CTOR(A) [](auto x){ return (A)(x); }
+
+//start program-specific code
 
 string preview(double d){
 	stringstream ss;
@@ -76,6 +80,11 @@ int main(int argc,char **argv){
 	auto blues=mapf([&](auto team){ return rc[team]; },blue);
 	
 	ofstream f("preview.html");
+	f<<"<html>";
+	f<<"<head>";
+	f<<title("Match preview: "+join(", ",MAP(as_string,teams)));
+	f<<"</head>";
+	f<<"<body>";
 	f<<"<table border>";
 	f<<tr(tag("th colspan=4 bgcolor=red","Red")+tag("th rowspan=2","Match Preview")+tag("th colspan=4 bgcolor=blue","Blue"));
 	f<<"<tr>";
@@ -99,6 +108,8 @@ int main(int argc,char **argv){
 	f<<join(mapf([](auto x){ return td(expected_score(vector{x})); },blues));
 	f<<"</tr>";
 	f<<"</table>";
+	f<<"</body>";
+	f<<"</html>";
 	//totals for each of the alliances
 	//and suggested strategies for each of them
 	//

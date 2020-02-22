@@ -29,17 +29,6 @@ std::vector<std::pair<T,bool>> mark_end(std::vector<T> a){
 	);
 }
 
-std::string join(std::string delim,std::vector<std::string> const& a){
-	std::stringstream ss;
-	for(auto [elem,last]:mark_end(a)){
-		ss<<elem;
-		if(!last){
-			ss<<delim;
-		}
-	}
-	return ss.str();
-}
-
 //start program-specific code
 
 auto wheel_spins(vector<Input_row> const& a){

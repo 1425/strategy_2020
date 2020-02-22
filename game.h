@@ -56,7 +56,7 @@ std::vector<Alliance_station> options(Alliance_station const*){
 
 using Alliance_capabilities=std::array<Robot_capabilities,3>;
 
-enum Climb_strategy{
+enum class Climb_strategy{
 	NONE,
 	PARK,
 	CLIMB_SELF,
@@ -116,16 +116,16 @@ double climb_points(Alliance_climb_capabilities const& cap,Alliance_climb_strate
 	std::vector<Px> balancers;
 	for(auto [cap1,strat1]:z){
 		switch(strat1){
-			case NONE:
+			case Climb_strategy::NONE:
 				break;
-			case PARK:
+			case Climb_strategy::PARK:
 				park_points+=5*cap1.park;
 				break;
-			case CLIMB_SELF:
+			case Climb_strategy::CLIMB_SELF:
 				climbed+=cap1.climb_unassisted;
 				balancers|=cap1.balance;
 				break;
-			case CLIMB_ASSISTED:
+			case Climb_strategy::CLIMB_ASSISTED:
 				assists_req|=cap1.climb_was_assisted;
 				break;
 			default:
