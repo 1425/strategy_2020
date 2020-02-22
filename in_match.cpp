@@ -3,6 +3,7 @@
 #include<cmath>
 #include "util.h"
 #include "input_data.h"
+#include "game.h"
 
 using namespace std;
 
@@ -83,57 +84,6 @@ vector<T> sort_by(Func f,vector<T> a){
 		}
 	);
 	return a;
-}
-
-Alliance operator-(Alliance a){
-	switch(a){
-		case Alliance::RED:
-			return Alliance::BLUE;
-		case Alliance::BLUE:
-			return Alliance::RED;
-		default:
-			assert(0);
-	}
-}
-
-using Alliance_station_number=Int_limited<1,3>;
-
-#define ALLIANCE_STATION_ITEMS(X)\
-	X(Alliance,alliance)\
-	X(Alliance_station_number,number)
-
-struct Alliance_station{
-	ALLIANCE_STATION_ITEMS(INST)
-};
-
-bool operator==(Alliance_station const& a,Alliance_station const& b){
-	#define X(A,B) if(a.B!=b.B) return 0;
-	ALLIANCE_STATION_ITEMS(X)
-	#undef X
-	return 1;
-}
-
-bool operator<(Alliance_station const& a,Alliance_station const& b){
-	#define X(A,B) if(a.B<b.B) return 1; if(b.B<a.B) return 0;
-	ALLIANCE_STATION_ITEMS(X)
-	#undef X
-	return 0;
-}
-
-std::ostream& operator<<(std::ostream& o,Alliance_station const& a){
-	o<<"(";
-	ALLIANCE_STATION_ITEMS(SHOW)
-	return o<<")";
-}
-
-std::vector<Alliance_station> options(Alliance_station const*){
-	std::vector<Alliance_station> r;
-	for(auto a:options((Alliance*)0)){
-		for(auto b:options((Alliance_station_number*)0)){
-			r|=Alliance_station{a,b};
-		}
-	}
-	return r;
 }
 
 using Score=unsigned;

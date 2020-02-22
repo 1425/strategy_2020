@@ -1,4 +1,5 @@
 #include "util.h"
+#include<cmath>
 
 std::vector<int> range(unsigned lim){
 	std::vector<int> r(lim);
@@ -153,4 +154,15 @@ bool parse(bool const*,std::string const& s){
 	if(s=="0") return 0;
 	if(s=="1") return 1;
 	throw "Unparsed bool: \""+s+"\"";
+}
+
+double product(std::vector<double> const& a){
+	double r=1;
+	for(auto elem:a) r*=elem;
+	return r;
+}
+
+double geomean(std::vector<double> const& a){
+	assert(a.size());
+	return pow(product(a),1.0/a.size());
 }

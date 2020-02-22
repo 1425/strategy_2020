@@ -26,12 +26,6 @@ using namespace std;
  *
  * */
 
-template<typename T>
-vector<T> cdr(vector<T> a){
-	if(a.size()) a.erase(begin(a));
-	return a;
-}
-
 using Inch=double;
 using Degrees=double;
 

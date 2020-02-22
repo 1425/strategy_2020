@@ -705,7 +705,7 @@ std::vector<std::pair<size_t,T>> enumerate(std::vector<T> const& a){
 	std::vector<std::pair<size_t,T>> r;
 	size_t i=0;
 	for(auto const& elem:a){
-		r|=make_pair(i++,elem);
+		r|=std::make_pair(i++,elem);
 	}
 	return r;
 }
@@ -837,5 +837,14 @@ std::set<K> keys(std::map<K,V> a){
 }
 
 double mean(double,double);
+
+template<typename T>
+std::vector<T> cdr(std::vector<T> a){
+	if(a.size()) a.erase(begin(a));
+	return a;
+}
+
+double product(std::vector<double> const&);
+double geomean(std::vector<double> const&);
 
 #endif

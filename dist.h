@@ -83,4 +83,15 @@ Px operator>=(Dist const& a,unsigned u){
 	return sum(seconds(f));
 }
 
+template<typename A,typename B>
+double product(std::pair<A,B> const& a){
+	return a.first*a.second;
+}
+
+double mean(Dist const& a){
+	double total=sum(MAP(product,a));
+	auto weight=sum(values(a));//this should usually be 1.
+	return total/weight;
+}
+
 #endif
