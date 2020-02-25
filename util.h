@@ -288,6 +288,9 @@ template<typename T>
 auto h1(T a){ return tag("h1",a); }
 
 template<typename T>
+auto h2(T a){ return tag("h2",a); }
+
+template<typename T>
 auto small(T a){ return tag("small",a); }
 
 std::string join(std::vector<std::string> const&);
@@ -861,6 +864,12 @@ T argmax(Func f,std::vector<T> const& a){
 		}
 	}
 	return r;
+}
+
+template<typename T>
+std::vector<T> operator+(std::vector<T> a,std::vector<T> b){
+	a|=b;
+	return a;
 }
 
 #endif

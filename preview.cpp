@@ -71,6 +71,22 @@ auto expected_score(std::vector<Robot_capabilities> const& a){
 	return expected_score(to_alliance(a));
 }
 
+//using Match_outcome=std::pair<double,double>;//bonus RP, points scored
+//How to estimate how large the distribution of opponent scores is ...
+//compare pair of poisson distributions w/ lambda=expected # of points
+//might have to do some digging to find the old Skellam cdf function in
+//terms of exp, etc.
+
+std::vector<std::pair<Match_outcome,Alliance_strategy>> top_strategies(Alliance_capabilities const& cap){
+	auto s=reversed(sorted(mapf(
+		[=](auto strat){
+			return expected_score(cap,strat);
+		},
+		alliance_climb_strategies()
+	)));
+	return take(5,s);
+}
+
 Alliance_strategy best_strategy(Alliance_capabilities const& cap){
 	return argmax(
 		[=](auto strat){ return expected_score(cap,strat); },
@@ -78,8 +94,35 @@ Alliance_strategy best_strategy(Alliance_capabilities const& cap){
 	);
 }
 
+enum class Analysis_mode{
+	QUAL,PLAYOFF
+};
+
+std::ostream& operator<<(std::ostream& o,Analysis_mode a){
+	switch(a){
+		case Analysis_mode::QUAL:
+			return "QUAL";
+		case Analysis_mode::PLAYOFF:
+			return "PLAYOFF";
+		default:
+			assert(0);
+	}
+}
+
 int main(int argc,char **argv){
 	auto a=tail(args(argc,argv));
+	std::optional<Analysis_mode> analysis_mode;
+
+	if(a[0]=="--qual"){
+		analysis_mode=Analysis_mode::QUAL:
+	}
+	if(a[0]=="--playoff"){
+		analysis_mode=Analysis_mode::PLAYOFF;
+	}
+	if(!analysis_mode){
+		analysis_mode=Analysis_mode::PLAYOFF;
+	}
+
 	if(a.size()!=7){
 		cout<<"Match preview:\n";
 		cout<<"Required arguments:\n";
@@ -112,7 +155,7 @@ int main(int argc,char **argv){
 	ofstream f("preview.html");
 	f<<"<html>";
 	f<<"<head>";
-	f<<title("Match preview: "+join(", ",MAP(as_string,teams)));
+	f<<title(as_string(analysis)+" Match preview: "+join(", ",MAP(as_string,teams)));
 	f<<"</head>";
 	f<<"<body>";
 	f<<"<table border>";

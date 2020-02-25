@@ -9,6 +9,12 @@ in_match: input_data.o util.o
 
 preview: util.o input_data.o
 
+handheld: util.o
+
+r5:
+	make handheld 2>&1
+	./handheld
+
 .PHONY: clean
 clean:
 	rm -f *.o
