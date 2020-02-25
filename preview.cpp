@@ -77,7 +77,7 @@ auto expected_score(std::vector<Robot_capabilities> const& a){
 //might have to do some digging to find the old Skellam cdf function in
 //terms of exp, etc.
 
-std::vector<std::pair<Match_outcome,Alliance_strategy>> top_strategies(Alliance_capabilities const& cap){
+/*std::vector<std::pair<Match_outcome,Alliance_strategy>> top_strategies(Alliance_capabilities const& cap){
 	auto s=reversed(sorted(mapf(
 		[=](auto strat){
 			return expected_score(cap,strat);
@@ -85,7 +85,7 @@ std::vector<std::pair<Match_outcome,Alliance_strategy>> top_strategies(Alliance_
 		alliance_climb_strategies()
 	)));
 	return take(5,s);
-}
+}*/
 
 Alliance_strategy best_strategy(Alliance_capabilities const& cap){
 	return argmax(
@@ -101,9 +101,9 @@ enum class Analysis_mode{
 std::ostream& operator<<(std::ostream& o,Analysis_mode a){
 	switch(a){
 		case Analysis_mode::QUAL:
-			return "QUAL";
+			return o<<"QUAL";
 		case Analysis_mode::PLAYOFF:
-			return "PLAYOFF";
+			return o<<"PLAYOFF";
 		default:
 			assert(0);
 	}
@@ -114,7 +114,7 @@ int main(int argc,char **argv){
 	std::optional<Analysis_mode> analysis_mode;
 
 	if(a[0]=="--qual"){
-		analysis_mode=Analysis_mode::QUAL:
+		analysis_mode=Analysis_mode::QUAL;
 	}
 	if(a[0]=="--playoff"){
 		analysis_mode=Analysis_mode::PLAYOFF;
@@ -155,7 +155,7 @@ int main(int argc,char **argv){
 	ofstream f("preview.html");
 	f<<"<html>";
 	f<<"<head>";
-	f<<title(as_string(analysis)+" Match preview: "+join(", ",MAP(as_string,teams)));
+	f<<title(" Match preview: "+join(", ",MAP(as_string,teams)));
 	f<<"</head>";
 	f<<"<body>";
 	f<<"<table border>";
