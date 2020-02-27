@@ -68,11 +68,11 @@ auto map_map(Func f,std::map<K,V> const& a){
 	return r;
 }
 
-template<typename T>
+/*template<typename T>
 vector<T> operator+(vector<T> a,vector<T> b){
 	a|=b;
 	return a;
-}
+}*/
 
 template<typename Func,typename T>
 vector<T> sort_by(Func f,vector<T> a){

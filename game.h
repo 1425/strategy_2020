@@ -169,7 +169,7 @@ double expected_score(Alliance_capabilities const& a,Alliance_strategy const& st
 			if(climb==Climb_strategy::NONE){
 				r+=value;
 			}else{
-				static const double SCALE_FACTOR=(TELEOP_LENGTH-ENDGAME_LENGTH+0.0)/TELEOP_LENGTH;
+				static const double SCALE_FACTOR=(teleop_length()-endgame_length()+0.0)/teleop_length();
 				r+=value*SCALE_FACTOR;
 			}
 		}
