@@ -872,4 +872,15 @@ std::vector<T> operator+(std::vector<T> a,std::vector<T> b){
 	return a;
 }
 
+template<typename T>
+std::vector<std::pair<T,bool>> mark_end(std::vector<T> a){
+	return mapf(
+		[=](auto p){
+			auto [i,v]=p;
+			return make_pair(v,i==a.size()-1);
+		},
+		enumerate(a)
+	);
+}
+
 #endif

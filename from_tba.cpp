@@ -3,14 +3,14 @@
 #include "../tba/tba.h"
 #include "capabilities.h"
 #include "util.h"
+#include "game.h"
 
 using namespace std;
 
+//start generic code
+
 template<typename T>
 T min(T a,T b,T c){ return std::min(a,std::min(b,c)); }
-
-template<typename A,typename B,typename C>
-int sum(std::tuple<A,B,C>)nyi
 
 template<typename A,typename B,typename C>
 std::vector<std::tuple<A,B,C>> zip(std::vector<A> const& a,std::vector<B> const& b,std::vector<C> const& c){
@@ -37,6 +37,8 @@ std::ostream& operator<<(std::ostream& o,std::variant<A...> const& a){
         std::visit([&](auto &&elem){ o<<elem; },a);
         return o;
 }
+
+//start program-specific code
 
 void print_r(unsigned indent,tba::Match const& a){
 	nyi
@@ -198,17 +200,22 @@ Args parse_args(int argc,char **argv){
 }
 
 int main1(int argc,char **argv){
-	cout<<"a0\n";
 	Args args=parse_args(argc,argv);
-	cout<<"a1\n";
 	std::ifstream f("../tba/auth_key");
 	std::string tba_key;
 	getline(f,tba_key);
 	tba::Cached_fetcher cf{tba::Fetcher{tba::Nonempty_string{tba_key}},tba::Cache{}};
-	cout<<"b1\n";
 	tba::Event_key event_key{"2020isde1"};
 	auto found=event_matches(cf,event_key);
-	PRINT(found.size());
+	//PRINT(found.size());
+	{
+		auto f=filter([](auto x){ return x.score_breakdown; },found);
+		cout<<"Matches found:"<<found.size()<<"\n";
+		cout<<"Score breakdowns:"<<f.size()<<"\n";
+		if(found.size()){
+			cout<<"fraction found:"<<(0.0+f.size())/found.size()<<"\n";
+		}
+	}
 	//print_r(found);
 
 	map<tba::Team_key,Info> info;
@@ -330,7 +337,9 @@ int main1(int argc,char **argv){
 	}
 	ROBOT_CAPABILITIES(X)
 	#undef X
-	nyi
+	show(m);
+	auto list=make_picklist(args.team,m);
+	show_picklist(args.team,list);
 	return 0;
 }
 

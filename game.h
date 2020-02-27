@@ -232,4 +232,160 @@ double expected_score(Alliance_capabilities const& a){
 	));
 }
 
+void show(std::map<Team,Robot_capabilities> const& data){
+	auto heading="Robot capabilities";
+	std::string s=html(
+		head(
+			title(heading)
+		)
+		+body(
+			h1(heading)
+			+tag("table border",
+				tr(
+					th("Team")
+					#define X(A,B) +th(""#B)
+					ROBOT_CAPABILITIES(X)
+					#undef X
+				)+
+				join(mapf(
+					[](auto x){
+						auto [team,data]=x;
+						return tr(
+							td(team)
+							#define X(A,B) +td(data.B)
+							ROBOT_CAPABILITIES(X)
+							#undef X
+						);
+					},
+					data
+				))
+			)
+		)
+	);
+	write_file("robot_capabilities.html",s);
+}
+
+using Picklist=std::vector<
+	std::pair<
+		std::pair<double,Team>,
+		std::vector<std::pair<double,Team>>
+	>
+>;
+
+void show_picklist(Team picker,Picklist const& a){
+	auto heading="Team "+as_string(picker)+" Picklist";
+
+	auto show_box=[](std::pair<double,Team> p)->std::string{
+		return td(
+			as_string(p.second)
+			+"<br>"
+			+tag(
+				"small",
+				tag("font color=grey",p.first)
+			)
+		);
+	};
+
+	auto s=html(
+		head(title(heading))
+		+body(
+			h1(heading)+
+			tag("table border",
+				tr(
+					tag("th colspan=2","First pick")+
+					tag("th colspan=22","Second pick")
+				)+
+				tr(
+					th("Rank")+
+					th("Team")+
+					join(mapf([](auto i){ return th(i); },range(1,23)))
+				)+
+				join(mapf(
+					[=](auto p){
+						auto [i,x]=p;
+						auto [fp,second]=x;
+						return tr(
+							th(i)
+							+show_box(fp)
+							+join(mapf(show_box,take(22,second)))
+						);
+					},
+					enumerate_from(1,take(15,a))
+				))
+			)
+		)
+	);
+	write_file("picklist.html",s);
+}
+
+Picklist make_picklist(Team picking_team,std::map<Team,Robot_capabilities> a){
+	auto picking_cap=a[picking_team];
+	auto others=filter_keys(
+		[=](auto k){
+			return k!=picking_team;
+		},
+		a
+	);
+	
+	auto x=reversed(sorted(mapf(
+		[=](auto p){
+			auto [t1,t1_cap]=p;
+			(void)t1;
+			Alliance_capabilities cap{picking_cap,t1_cap,{}};
+			return std::make_pair(expected_score(cap),t1_cap);
+		},
+		others
+	)));
+
+	auto ex_cap=[&]()->Robot_capabilities{
+		if(others.size()==0){
+			return {};
+		}
+		if(others.size()>24){
+			//take the 22nd-24th best robots as the example 3rd robot
+			return mean(take(5,skip(22,seconds(x))));
+		}
+		//if fewer than 24, then just take the bottom 5.
+		return mean(take(5,reversed(seconds(x))));
+	}();
+
+	std::cout<<"Example 3rd robot capabilities:\n";
+	std::cout<<ex_cap<<"\n";
+
+	auto first_picks=reversed(sorted(mapf(
+		[=](auto p){
+			auto [t1,t1_cap]=p;
+			Alliance_capabilities cap{picking_cap,t1_cap,ex_cap};
+			return std::make_pair(expected_score(cap),t1);
+		},
+		others
+	)));
+
+	//PRINT(first_picks);
+
+	auto second_picks=to_map(mapf(
+		[&](auto t1)->std::pair<Team,std::vector<std::pair<double,Team>>>{
+			auto t1_cap=a[t1];
+			auto left=without_key(t1,others);
+			auto result=reversed(sorted(mapf(
+				[=](auto x){
+					auto [t2,t2_cap]=x;
+					Alliance_capabilities cap{picking_cap,t1_cap,t2_cap};
+					return std::make_pair(expected_score(cap),t2);
+				},
+				to_vec(left)
+			)));
+			return std::make_pair(t1,result);
+		},
+		to_vec(keys(others))
+	));
+
+	return mapf(
+		[&](auto p){
+			return std::make_pair(p,second_picks[p.second]);
+		},
+		first_picks
+	);
+}
+
 #endif
