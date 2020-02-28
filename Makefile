@@ -22,6 +22,12 @@ from_tba_test:
 	make from_tba 2>&1
 	./from_tba
 
+viper: dist.o capabilities.o util.o
+
+viper_test:
+	make viper 2>&1
+	./viper --path viper.txt
+
 .PHONY: clean
 clean:
 	rm -f *.o

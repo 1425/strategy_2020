@@ -61,7 +61,9 @@ Px wheel_odds(Team team,std::vector<std::vector<Input_row>> const& alliance_resu
 			);
 			auto other_robots=by_this[0];
 			auto this_robot=by_this[1];
-			assert(this_robot.size()==1);
+
+			//if there is more than one, there will already be a diagnostic for that printed elsewhere, so just choose one of the entries.
+			assert(this_robot.size()>=1);
 
 			auto spins=sum(mapf([](auto a){ return a.wheel_spin; },other_robots));
 			if(spins) return std::make_pair(0,0);
@@ -95,7 +97,9 @@ Px wheel_color(Team team,std::vector<std::vector<Input_row>> const& alliance_res
 			);
 			auto other_robots=by_this[0];
 			auto this_robot=by_this[1];
-			assert(this_robot.size()==1);
+
+			//If there is more than one entry of the same robot in a match there will already be a diagnostic about that printed elsewhere, so just go ahead and choose one arbitrarily.
+			assert(this_robot.size()>=1);
 
 			auto colors=sum(mapf([](auto a){ return a.wheel_color; },other_robots));
 			if(colors) return std::make_pair(0,0);
@@ -124,7 +128,10 @@ double assisted2(Team team,std::vector<std::vector<Input_row>> const& alliance_r
 			);
 			auto available=others_could_take.size()>2;
 			auto f=filter([=](auto x){ return x.team==team; },x);
-			assert(f.size()==1);
+
+			//There is a seperate diagnostic that will warn about the same robot appearing more than once in a match, so just arbitrarily choose one if it shows up more than once.
+			assert(f.size()>=1);
+
 			return std::make_pair(f[0].climb_assists==2,available);
 		},
 		alliance_results
@@ -145,7 +152,10 @@ double assisted1(Team team,std::vector<std::vector<Input_row>> const& alliance_r
 			);
 			auto available=others_could_take.size();
 			auto f=filter([=](auto x){ return x.team==team; },x);
-			assert(f.size()==1);
+
+			//There is a seperate diagnostic that will warn about the same robot appearing more than once in a match, so just allow it to appear more than once and arbitrarily choose an entry.
+			assert(f.size()>=1);
+
 			return std::make_pair(f[0].climb_assists==1,available);
 		},
 		alliance_results

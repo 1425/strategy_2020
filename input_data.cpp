@@ -17,8 +17,8 @@ std::ostream& operator<<(std::ostream& o,Alliance a){
 }
 
 Alliance parse(Alliance const*,std::string const& a){
-	if(a=="RED") return Alliance::RED;
-	if(a=="BLUE") return Alliance::BLUE;
+	if(a=="RED" || a=="red") return Alliance::RED;
+	if(a=="BLUE" || a=="blue") return Alliance::BLUE;
 	throw "Invalid alliance: \""+a+"\"";
 }
 

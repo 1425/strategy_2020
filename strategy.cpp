@@ -114,7 +114,7 @@ void run(Team team,std::optional<string> const& path){
 	show_picklist(team,list);
 }
 
-int main(int argc,char **argv){
+int main1(int argc,char **argv){
 	Team team{1425};
 	auto set_team=[&](vector<string>& a)->int{
 		assert(a.size());
@@ -184,4 +184,13 @@ int main(int argc,char **argv){
 	}
 
 	run(team,path);
+	return 0;
+}
+
+int main(int argc,char **argv){
+	try{
+		return main1(argc,argv);
+	}catch(std::string const& a){
+		cout<<"Caught:"<<a<<"\n";
+	}
 }
