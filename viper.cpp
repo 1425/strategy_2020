@@ -76,7 +76,11 @@ Args parse_args(int argc,char **argv){
 Dist point_dist(double value){
 	Dist r;
 	r.clear();
-	r[value]=1;
+	if(value>=0){
+		r[value]=1;
+	}else{
+		r[0]=1;
+	}
 	return r;
 }
 
@@ -98,7 +102,7 @@ map<Team,Robot_capabilities> parse_viper(string path){
 		auto d=[&](int i){ return stod(x[i]); };
 		auto opr=d(1);
 		auto oprp=d(2);
-		auto auto_line=d(3);
+		auto auto_line=d(3)/5;
 		auto climb=d(4)/25; //going to just assume that it's from hanging and not park, etc.
 		auto auto_=d(5);
 		auto auto_inner=d(6)/3;
@@ -121,7 +125,7 @@ map<Team,Robot_capabilities> parse_viper(string path){
 			point_dist(auto_bottom+auto_outer+auto_inner),
 			point_dist(teleop_bottom+teleop_outer+teleop_inner),
 			.3, //wheel spin - assume it is done 30% of the time
-			.3, //wheel color picking - assume done 30% of the time
+			.1, //wheel color picking - assume done 30% of the time
 			climb,
 			0,//assist2
 			0,//assist1

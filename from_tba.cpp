@@ -205,7 +205,8 @@ int main1(int argc,char **argv){
 	std::string tba_key;
 	getline(f,tba_key);
 	tba::Cached_fetcher cf{tba::Fetcher{tba::Nonempty_string{tba_key}},tba::Cache{}};
-	tba::Event_key event_key{"2020isde1"};
+	//tba::Event_key event_key{"2020isde1"};
+	tba::Event_key event_key{args.event};
 	auto found=event_matches(cf,event_key);
 	//PRINT(found.size());
 	{
