@@ -1,3 +1,6 @@
+#include "preview.h"
+
+#if 0
 #include<iomanip>
 #include "util.h"
 #include "input_data.h"
@@ -109,45 +112,9 @@ std::ostream& operator<<(std::ostream& o,Analysis_mode a){
 	}
 }
 
-int main(int argc,char **argv){
-	auto a=tail(args(argc,argv));
-	std::optional<Analysis_mode> analysis_mode;
-
-	if(a[0]=="--qual"){
-		analysis_mode=Analysis_mode::QUAL;
-	}
-	if(a[0]=="--playoff"){
-		analysis_mode=Analysis_mode::PLAYOFF;
-	}
-	if(!analysis_mode){
-		analysis_mode=Analysis_mode::PLAYOFF;
-	}
-
-	if(a.size()!=7){
-		cout<<"Match preview:\n";
-		cout<<"Required arguments:\n";
-		vector<string> v{
-			"Input filename (csv)"
-		};
-		for(auto a:options((Alliance_station*)0)){
-			v|="Team number located at "+as_string(a);
-		}
-		for(auto [i,elem]:enumerate_from(1,v)){
-			cout<<"\t"<<i<<": "<<elem<<"\n";
-		}
-	}
-	auto path=a[0];
-	auto teams=mapf([](auto s){ return Team(stoi(s)); },tail(a));
+void make_preview(std::vector<Team> const& teams,std::map<Team,Robot_capabilities> rc){
 	auto red=take(3,teams);
 	auto blue=skip(3,teams);
-
-	//parse the input data
-	auto data=read_csv(path);
-	sanity_check(data);
-
-	//run it through the capabilities
-	auto rc=robot_capabilities(data);
-
 	//show matchup for just this match
 	auto reds=to_alliance(mapf([&](auto team){ return rc[team]; },red));
 	auto blues=to_alliance(mapf([&](auto team){ return rc[team]; },blue));
@@ -196,4 +163,44 @@ int main(int argc,char **argv){
 	//1) how do you want to climb?
 	//2) do you want the ball scoring to go just for points or do you want to aim for # of balls scored?
 	//3) is it worth cutting a climb in order to do the second bonus?
+}
+#endif
+
+int main(int argc,char **argv){
+	auto a=tail(args(argc,argv));
+	std::optional<Analysis_mode> analysis_mode;
+
+	if(a[0]=="--qual"){
+		analysis_mode=Analysis_mode::QUAL;
+	}
+	if(a[0]=="--playoff"){
+		analysis_mode=Analysis_mode::PLAYOFF;
+	}
+	if(!analysis_mode){
+		analysis_mode=Analysis_mode::PLAYOFF;
+	}
+
+	if(a.size()!=7){
+		cout<<"Match preview:\n";
+		cout<<"Required arguments:\n";
+		vector<string> v{
+			"Input filename (csv)"
+		};
+		for(auto a:options((Alliance_station*)0)){
+			v|="Team number located at "+as_string(a);
+		}
+		for(auto [i,elem]:enumerate_from(1,v)){
+			cout<<"\t"<<i<<": "<<elem<<"\n";
+		}
+	}
+	auto path=a[0];
+	auto teams=mapf([](auto s){ return Team(stoi(s)); },tail(a));
+
+	//parse the input data
+	auto data=read_csv(path);
+	sanity_check(data);
+
+	//run it through the capabilities
+	auto rc=robot_capabilities(data);
+	make_preview(teams,rc);
 }

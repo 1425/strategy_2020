@@ -1,3 +1,4 @@
+#include "viper.h"
 #include<iostream>
 #include<fstream>
 #include<string.h>
@@ -30,49 +31,6 @@ vector<string> split(string s){
 	return r;
 }
 
-struct Args{
-	string path;
-	Team team;
-};
-
-void help(){
-	cout<<"Arguments:\n";
-	cout<<"--path\n";
-	cout<<"\tThe path to the data file.\n";
-	cout<<"--team\n";
-	cout<<"\tTeam number to do the picking\n";
-	cout<<"--help\n";
-	cout<<"\tShow this message\n";
-	exit(0);
-}
-
-Args parse_args(int argc,char **argv){
-	(void)argc;
-	Args r;
-	r.team=Team{1425};
-	for(auto at=argv+1;*at;++at){
-		if(string(*at)=="--help"){
-			help();
-		}else if(string(*at)=="--team"){
-			at++;
-			assert(*at);
-			r.team=Team(stoi(*at));
-		}else if(string(*at)=="--path"){
-			at++;
-			assert(*at);
-			r.path=*at;
-		}else{
-			cout<<"Invalid argument.\n";
-			help();
-		}
-	}
-	if(r.path==""){
-		cout<<"Must specify input file\n";
-		exit(1);
-	}
-	return r;
-}
-
 Dist point_dist(double value){
 	Dist r;
 	r.clear();
@@ -84,7 +42,7 @@ Dist point_dist(double value){
 	return r;
 }
 
-map<Team,Robot_capabilities> parse_viper(string path){
+map<Team,Robot_capabilities> parse_viper(string const& path){
 	ifstream f(path.c_str());
 	string s;
 	while(f.good() && !contains("Teleop Outer",s)) getline(f,s);
@@ -143,11 +101,3 @@ map<Team,Robot_capabilities> parse_viper(string path){
 	return r;
 }
 
-int main(int argc,char **argv){
-	auto args=parse_args(argc,argv);
-	auto rc=parse_viper(args.path);
-	show(rc);
-	auto list=make_picklist(args.team,rc);
-	show_picklist(args.team,list);
-	return 0;
-}

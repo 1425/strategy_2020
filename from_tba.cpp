@@ -9,35 +9,6 @@ using namespace std;
 
 //start generic code
 
-template<typename T>
-T min(T a,T b,T c){ return std::min(a,std::min(b,c)); }
-
-template<typename A,typename B,typename C>
-std::vector<std::tuple<A,B,C>> zip(std::vector<A> const& a,std::vector<B> const& b,std::vector<C> const& c){
-	return mapf(
-		[&](auto i){
-			return make_tuple(a[i],b[i],c[i]);
-		},
-		range(min(a.size(),b.size(),c.size()))
-	);
-}
-
-template<typename T>
-std::vector<T> to_vec(std::multiset<T> a){
-	return std::vector<T>(a.begin(),a.end());
-}
-
-auto mean(multiset<unsigned> a){ return mean(to_vec(a)); }
-
-template<typename T>
-auto mean_d(multiset<T> a){ return mean_d(to_vec(a)); }
-
-template<typename... A>
-std::ostream& operator<<(std::ostream& o,std::variant<A...> const& a){
-        std::visit([&](auto &&elem){ o<<elem; },a);
-        return o;
-}
-
 //start program-specific code
 
 void print_r(unsigned indent,tba::Match const& a){

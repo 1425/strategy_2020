@@ -178,3 +178,5 @@ double geomean(std::vector<double> const& a){
 	assert(a.size());
 	return pow(product(a),1.0/a.size());
 }
+
+double mean(std::multiset<unsigned> a){ return mean(to_vec(a)); }

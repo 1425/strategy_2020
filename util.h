@@ -14,6 +14,7 @@
 #include<algorithm>
 #include<sstream>
 #include<bitset>
+#include<variant>
 
 #define nyi { std::cout<<"nyi "<<__FILE__<<":"<<__LINE__<<"\n"; exit(44); }
 #define PRINT(X) { std::cout<<""#X<<":"<<(X)<<"\n"; }
@@ -881,6 +882,35 @@ std::vector<std::pair<T,bool>> mark_end(std::vector<T> a){
 		},
 		enumerate(a)
 	);
+}
+
+template<typename T>
+T min(T a,T b,T c){ return std::min(a,std::min(b,c)); }
+
+template<typename A,typename B,typename C>
+std::vector<std::tuple<A,B,C>> zip(std::vector<A> const& a,std::vector<B> const& b,std::vector<C> const& c){
+	return mapf(
+		[&](auto i){
+			return make_tuple(a[i],b[i],c[i]);
+		},
+		range(min(a.size(),b.size(),c.size()))
+	);
+}
+
+template<typename T>
+std::vector<T> to_vec(std::multiset<T> a){
+	return std::vector<T>(a.begin(),a.end());
+}
+
+double mean(std::multiset<unsigned> const&);
+
+//template<typename T>
+//auto mean_d(multiset<T> a){ return mean_d(to_vec(a)); }
+
+template<typename... A>
+std::ostream& operator<<(std::ostream& o,std::variant<A...> const& a){
+        std::visit([&](auto &&elem){ o<<elem; },a);
+        return o;
 }
 
 #endif
