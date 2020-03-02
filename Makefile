@@ -35,5 +35,5 @@ plots: ../tba/db.o plots.o ../tba/data.o ../tba/rapidjson.o ../tba/curl.o util.o
 
 .PHONY: clean
 clean:
-	rm -f *.o
+	rm -f *.o *.png plot*.py
 	rm -f strategy 

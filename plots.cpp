@@ -1,6 +1,7 @@
 #include<iostream>
 #include<cmath>
 #include<functional>
+#include<unistd.h>
 #include "../tba/data.h"
 #include "input_data.h"
 #include "../tba/db.h"
@@ -73,14 +74,27 @@ void plot(std::vector<tba::Zebra_team> const& data){
 		f<<"plt.savefig(\"fig_"<<name<<".png\")\n";
 	}
 
-	auto r=system("python plotter.py");
-	assert(r==0);
+	pid_t p=fork();
+	if(p==0){
+		auto r=system("python plotter.py");
+		assert(r==0);
+		exit(0);
+	}
 }
 
 void plot(tba::Zebra_team const& a,string name){
 	//This is going to feed the data out to python for the plotting.
+	pid_t p=fork();
+	if(p!=0) return;
+
+	string py_name=[=](){
+		stringstream ss;
+		ss<<"plotter_"<<getpid()<<".py";
+		return ss.str();
+	}();
+
 	{
-		ofstream f("plotter.py");
+		ofstream f(py_name);
 		f<<"import numpy as np\n";
 		f<<"import matplotlib.pyplot as plt\n";
 		//f<<"#a:"<<a<<"\n";
@@ -102,8 +116,9 @@ void plot(tba::Zebra_team const& a,string name){
 		f<<"plt.savefig(\"fig_"<<name<<".png\")\n";
 	}
 
-	auto r=system("python plotter.py");
+	auto r=system( ("python "+py_name).c_str() );
 	assert(r==0);
+	exit(0);
 }
 
 tba::Team_key to_team_key(Team const& a){
@@ -142,7 +157,10 @@ std::vector<std::pair<T,T>> pick_stride(unsigned stride,std::vector<T> const& a)
 }
 
 void heatmap(std::function<double(int,int)> density,std::string name){
-	auto plotfile="plot_heat.py";
+	auto p=fork();
+	if(p!=0) return;
+
+	auto plotfile="plot_heat_"+name+".py";
 	{
 		ofstream f(plotfile);
 		f<<"import numpy as np\n";
@@ -162,7 +180,8 @@ void heatmap(std::function<double(int,int)> density,std::string name){
 		for(auto y:range(HEIGHT)){
 			f<<"\t[";
 			for(auto x:range(WIDTH)){
-				f<<density(x,27-y)<<",";
+				auto v=min(50,density(x,27-y));
+				f<<v<<",";
 			}
 			f<<"\t],\n";
 		}
@@ -178,8 +197,18 @@ void heatmap(std::function<double(int,int)> density,std::string name){
 	}
 	auto r=system((string()+"python "+plotfile).c_str());
 	assert(r==0);
+	exit(0);
 }
 
+template<typename A,typename B>
+B max_seconds(std::vector<std::pair<A,B>> const& a){
+	assert(a.size());
+	B r=a[0].second;
+	for(auto const& elem:a){
+		r=max(r,elem.second);
+	}
+	return r;
+}
 
 void largest_jump(std::vector<double> const& time,tba::Zebra_team const& a,std::string const& name){
 	assert(time.size()==a.xs.size());
@@ -195,12 +224,18 @@ void largest_jump(std::vector<double> const& time,tba::Zebra_team const& a,std::
 		}
 	}
 
+	map<pair<int,int>,unsigned> buckets;
+	for(auto elem:data){
+		buckets[make_pair(elem.second.first,elem.second.second)]++;
+	}
+	PRINT(buckets.size());
 	heatmap(
-		[=](int x,int y)->double{
-			return filter(
+		[&](int x,int y)->double{
+			/*return filter(
 				[=](auto elem){ return int(elem.second.first)==x && int(elem.second.second)==y; },
 				data
-			).size();
+			).size();*/
+			return buckets[make_pair(x,y)];
 		},
 		name
 	);
@@ -227,9 +262,22 @@ void largest_jump(std::vector<double> const& time,tba::Zebra_team const& a,std::
 	//double threshold=10;
 	//going to just do this brute-force to start
 	vector<pair<Datapoint,Datapoint>> r;
-
+	//vector<pair<Point,Point>> r2;
 	for(auto stride:range(size_t(1),data.size())){
 		r|=pick_stride(stride,data);
+	}
+	vector<double> ts;
+	vector<double> x1;
+	vector<double> y1;
+
+	for(auto i:range(data.size())){
+		for(auto j:range(i,data.size())){
+			auto p1=data[i];
+			auto p2=data[j];
+			ts|=p2.first-p1.first;
+			x1|=p2.second.first-p1.second.first;
+			y1|=p2.second.second-p2.second.second;
+		}
 	}
 
 	using Distance=double;
@@ -242,19 +290,27 @@ void largest_jump(std::vector<double> const& time,tba::Zebra_team const& a,std::
 		auto dx=x.first.second.first-x.second.second.first;
 		auto dy=x.first.second.second-x.second.second.second;
 		auto dist=sqrt(dx*dx+dy*dy);
-		assert(dist>=0);
+		//assert(dist>=0);
 		//PRINT(dist);
 		//PRINT(dt);
 		auto speed=dist/dt;
-		assert(speed<=max(instant_speeds));
+		//assert(speed<=max(instant_speeds));
 		v|=make_pair(dist,speed);
 	}
 	cout<<"\n"<<name<<"\n";
 	cout<<"Distance (ft)\tSpeed (ft/s)\tTime (s)\n";
+	auto g=group(
+		[](auto x){
+			(void)x;
+			return 0;//int(x.first/5);
+		},
+		v
+	);
+	PRINT(g.size());
 	for(auto dist:range(0,60,5)){
 		auto m=filter([=](auto x){ return x.first>=dist && x.first<=dist+5; },v);
 		if(m.size()){
-			auto speed=max(seconds(m));
+			auto speed=max_seconds(m); //max(seconds(m));
 			assert(speed>0);
 			cout<<dist<<"\t\t"<<speed<<"\t\t"<<dist/speed<<"\n";
 		}
@@ -281,13 +337,32 @@ tba::Zebra_team flip_field(tba::Zebra_team a){
 	a.ys=mapf(
 		[](auto y)->optional<double>{
 			if(y){
-				return 26+11.25-*y;
+				return 26+11.25/12-*y;
 			}
 			return y;
 		},
 		a.ys
 	);
 	return a;
+}
+
+tba::Zebra_team find_team(Team team,tba::Zebra const& data){
+	for(auto x:data.alliances.red){
+		if(x.team_key==team){
+			return x;
+		}
+	}
+	for(auto x:data.alliances.blue){
+		if(x.team_key==team){
+			//Take advantage of the rotational symmetry to normalize to being red.
+			return flip_field(x);
+		}
+	}
+	assert(0);
+}
+
+Team to_team(tba::Team_key a){
+	return Team{atoi(a.str().c_str()+3)};
 }
 
 int main1(int argc,char **argv){
@@ -299,10 +374,33 @@ int main1(int argc,char **argv){
 	static const auto YEAR=tba::Year{2020};
 
 	auto e=event_teams_keys(cf,tba::Event_key{"2020orwil"});
-	//this is just here to prime the cache.
+
 	for(auto t:e){
+		std::vector<tba::Zebra_team> paths;
 		for(auto match_key:team_matches_year_keys(cf,t,YEAR)){
-			zebra_motionworks(cf,match_key);
+			auto data=zebra_motionworks(cf,match_key);
+			if(!data) continue;
+			paths|=find_team(to_team(t),*data);
+		}
+		using Mode=int;//0=auto,1=tele main, 2=endgame
+		map<Mode,map<pair<int,int>,unsigned>> m;
+		for(auto elem:paths){
+			for(auto [i,point]:enumerate(zip(elem.xs,elem.ys))){
+				if(point.first){
+					auto mode=[=](){
+						if(i<15*10) return 0;
+						if(i<(15+135-30)*10) return 1;
+						return 2;
+					}();
+					m[mode][make_pair(*point.first,*point.second)]++;
+				}
+			}
+		}
+		for(auto [mode,info]:m){
+			heatmap(
+				[&](int x,int y){ return info[make_pair(x,y)]; },
+				as_string(t)+"_"+as_string(mode)
+			);
 		}
 	}
 
@@ -311,11 +409,9 @@ int main1(int argc,char **argv){
 
 	vector<tba::Zebra_team> paths;
 	for(auto match_key:matches){
-		//cout<<"pre\n";
 		auto data=zebra_motionworks(cf,match_key);
 		if(!data) continue;
-		//cout<<"post\n";
-		auto find_path=[&](){
+		/*auto find_path=[&](){
 			for(auto x:data->alliances.red){
 				if(x.team_key==args.team){
 					return x;
@@ -327,8 +423,8 @@ int main1(int argc,char **argv){
 				}
 			}
 			assert(0);
-		};
-		auto p=find_path();
+		};*/
+		auto p=find_team(args.team,*data);
 		plot(p,match_key.get());
 		paths|=p;
 
