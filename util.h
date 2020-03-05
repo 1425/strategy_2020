@@ -217,8 +217,9 @@ T id(T t){ return t; }
 
 template<typename Func,typename T>
 auto mapf(Func f,std::vector<T> const& v) -> std::vector< decltype(f(v[0])) > {
-	std::vector<decltype(f(v[0]))> r(v.size());
-	std::transform(begin(v),end(v),begin(r),f);
+	std::vector<decltype(f(v[0]))> r;
+	r.reserve(v.size());
+	std::transform(begin(v),end(v),std::back_inserter(r),f);
 	return r;
 }
 

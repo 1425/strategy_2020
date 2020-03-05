@@ -2,12 +2,21 @@
 #include<cmath>
 #include<functional>
 #include<unistd.h>
+#include<ctype.h>
 #include "../tba/data.h"
 #include "input_data.h"
 #include "../tba/db.h"
 #include "../tba/tba.h"
 
 using namespace std;
+
+template<typename T>
+std::vector<T> operator|(vector<T> const& a,vector<T> const& b){
+	std::vector<T> r;
+	r|=a;
+	r|=b;
+	return r;
+}
 
 template<typename T>
 T median(std::vector<T> const& a){
@@ -28,27 +37,11 @@ vector<T> flatten(std::vector<std::vector<T>> const& a){
 //Given a team at an event, draw all of the charts for the matches that they have played so far
 //After that works, rotate based on the alliance that they had been on at the time
 
-struct Args{
-	tba::Event_key event;
-	Team team;
-};
-
-void help(){
-	cout<<"usage: ./plots <EVENT_KEY> <TEAM>\n";
-	exit(0);
-}
-
-Args parse_args(int argc,char **argv){
-	if(argc!=3){
-		help();
-	}
-	return Args{tba::Event_key{argv[1]},Team{atoi(argv[2])}};
-}
-
-void plot(std::vector<tba::Zebra_team> const& data){
+void plot(std::vector<tba::Zebra_team> const& data,string name="all"){
 	//This is going to feed the data out to python for the plotting.
+	string plotter_name="plotter_"+name+"_line.py";
 	{
-		ofstream f("plotter.py");
+		ofstream f(plotter_name.c_str());
 		f<<"import numpy as np\n";
 		f<<"import matplotlib.pyplot as plt\n";
 		//f<<"#a:"<<a<<"\n";
@@ -70,13 +63,12 @@ void plot(std::vector<tba::Zebra_team> const& data){
 			f<<"plt.plot(xs,ys)\n";
 		}
 
-		auto name="all";
-		f<<"plt.savefig(\"fig_"<<name<<".png\")\n";
+		f<<"plt.savefig(\"line_"<<name<<".png\")\n";
 	}
 
 	pid_t p=fork();
 	if(p==0){
-		auto r=system("python plotter.py");
+		auto r=system( ("python "+plotter_name).c_str() );
 		assert(r==0);
 		exit(0);
 	}
@@ -346,6 +338,10 @@ tba::Zebra_team flip_field(tba::Zebra_team a){
 	return a;
 }
 
+vector<tba::Zebra_team> all_teams(tba::Zebra const& a){
+	return a.alliances.red|a.alliances.blue;
+}
+
 tba::Zebra_team find_team(Team team,tba::Zebra const& data){
 	for(auto x:data.alliances.red){
 		if(x.team_key==team){
@@ -365,6 +361,368 @@ Team to_team(tba::Team_key a){
 	return Team{atoi(a.str().c_str()+3)};
 }
 
+bool in_own_trench(Point p){
+	auto [x,y]=p;
+	return x>=19 && x<=23 && y>=0 && y<=5;
+}
+
+vector<Point> to_points(tba::Zebra_team const& a){
+	vector<Point> r;
+	for(auto [x,y]:zip(a.xs,a.ys)){
+		if(x){
+			assert(y);
+			r|=make_pair(*x,*y);
+		}
+	}
+	return r;
+}
+
+template<typename Func,typename T>
+size_t count(Func f,T const& t){
+	size_t r=0;
+	for(auto elem:t){
+		if(f(elem)){
+			r++;
+		}
+	}
+	return r;
+}
+
+template<typename A,typename B>
+std::vector<std::pair<B,A>> swap_pairs(std::vector<std::pair<A,B>> const& a){
+	return mapf([](auto p){ return make_pair(p.second,p.first); },a);
+}
+
+void find_tall_bots(tba::Cached_fetcher &f){
+	auto e=event_teams_keys(f,tba::Event_key{"2020orwil"});
+	map<Team,double> m;
+	for(auto team:e){
+		std::vector<tba::Zebra_team> paths;
+		static const auto YEAR=tba::Year{2020};
+		for(auto match_key:team_matches_year_keys(f,team,YEAR)){
+			auto data=zebra_motionworks(f,match_key);
+			if(data){
+				paths|=find_team(to_team(team),*data);
+			}
+		}
+		auto pts=flatten(mapf(to_points,paths));
+		auto c=count(in_own_trench,pts);
+		/*PRINT(team);
+		PRINT(c);
+		PRINT(pts.size());*/
+		if(pts.size()){
+			m[to_team(team)]=(0.0+c)/pts.size();
+		}
+	}
+	//print_lines(m);
+	print_lines(sorted(swap_pairs(to_vec(m))));
+	nyi
+}
+
+#define PERIOD_OPTIONS(X)\
+	X(AUTO)\
+	X(TELE_MAIN)\
+	X(ENDGAME)
+
+enum class Period{
+	#define X(A) A,
+	PERIOD_OPTIONS(X)
+	#undef X
+};
+
+std::ostream& operator<<(std::ostream& o,Period a){
+	#define X(A) if(a==Period::A) return o<<""#A;
+	PERIOD_OPTIONS(X)
+	#undef X
+	assert(0);
+}
+
+std::vector<Period> options(Period const*){
+	return vector{
+		#define X(A) Period::A,
+		PERIOD_OPTIONS(X)
+		#undef X
+	};
+}
+
+#define DISPLAY_STYLE(X)\
+	X(LINE)\
+	X(HEAT)
+
+enum class Display_style{
+	#define X(A) A,
+	DISPLAY_STYLE(X)
+	#undef X
+};
+
+std::ostream& operator<<(std::ostream& o,Display_style a){
+	#define X(A) if(a==Display_style::A) return o<<""#A;
+	DISPLAY_STYLE(X)
+	#undef X
+	assert(0);
+}
+
+std::vector<Display_style> options(Display_style const*){
+	return {
+		#define X(A) Display_style::A,
+		DISPLAY_STYLE(X)
+		#undef X
+	};
+}
+
+tba::Event_key parse(char const *s,tba::Event_key const*){
+	return tba::Event_key{s};
+}
+
+vector<tba::Event_key> options(tba::Event_key const*){
+	//obviously, this is just a couple examples, no exhaustive
+	return {
+		tba::Event_key{"2020orore"},
+		tba::Event_key{"2020orwil"}
+	};
+}
+
+#define ARGS_ITEMS(X)\
+	X(optional<Team>,team)\
+	X(optional<tba::Match_key>,match)\
+	X(optional<Display_style>,style)\
+	X(optional<Period>,period)\
+	X(optional<tba::Event_key>,event)
+
+struct Args{
+	ARGS_ITEMS(INST)
+};
+
+Team parse(string,Team const*)nyi
+
+Team parse(const char *s,Team const*){
+	return Team{atoi(s)};
+}
+
+tba::Match_key parse(const char *s,tba::Match_key const*){
+	return tba::Match_key{s};
+}
+
+Display_style parse(const char *s,Display_style const* x){
+	for(auto a:options(x)){
+		if(s==as_string(a)){
+			return a;
+		}
+	}
+	assert(0);
+}
+
+Period parse(const char *s,Period const *x){
+	for(auto a:options(x)){
+		if(s==as_string(a)){
+			return a;
+		}
+	}
+	stringstream ss;
+	ss<<"Invalid period: \""<<s<<"\"";
+	throw ss.str();
+}
+
+/*template<typename T>
+T parse(char*,T const* x){
+	cout<<decltype(x)<<"\n";
+	nyi
+}*/
+
+template<typename T>
+T parse(char *s,optional<T> const*){
+	return parse(s,(T*)0);
+}
+
+template<typename Func>
+auto mapf(Func f,std::string const& s){
+	vector<ELEM(s)> r;
+	for(auto elem:s){
+		r|=f(elem);
+	}
+	return r;
+}
+
+string str(vector<char> v){
+	stringstream ss;
+	for(auto c:v){
+		ss<<c;
+	}
+	return ss.str();
+}
+
+string to_caps(string const& s){
+	//MAP(toupper,s);
+	return str(mapf([](auto c)->char{ return toupper(c); },s));
+}
+
+vector<tba::Match_key> options(tba::Match_key const*){
+	//these are obviously just examples, not a complete list
+	return {tba::Match_key{"2020orore_qm4"},tba::Match_key{"2020orwil_sf1m2"}};
+}
+
+template<typename T>
+vector<T> options(optional<T> const*){
+	return options((T*)0);
+}
+
+void help(){
+	cout<<"Arguments:\n";
+	#define X(A,B) {\
+		cout<<"--"#B<<" <"<<to_caps(""#B)<<">\n";\
+		cout<<"\tEx: "<<take(5,options((A*)0))<<"\n";\
+	}
+	ARGS_ITEMS(X)
+	#undef X
+	exit(0);
+}
+
+Args parse_args(int argc,char **argv){
+	(void)argc;
+	Args r;
+	for(int i=1;argv[i];i++){
+		#define X(A,B) if(argv[i]==string("--"#B)){\
+			i++;\
+			assert(argv[i]);\
+			r.B=parse(argv[i],(A*)0);\
+			continue;\
+		}
+		ARGS_ITEMS(X)
+		#undef X
+		if(string(argv[i])=="--help"){
+			help();
+		}
+		cout<<"Unrecognized arg:"<<argv[i]<<"\n";
+		exit(1);
+	}
+	if(r.match && r.event){
+		cout<<"Error: Match number and event may not both be specified\n";
+		exit(1);
+	}
+
+	return r;
+}
+
+vector<Display_style> styles(std::optional<Display_style> const& a){
+	if(a) return {*a};
+	return options((Display_style*)0);
+}
+
+vector<Period> periods(std::optional<Period> const& a){
+	if(a) return {*a};
+	return options((Period*)0);
+}
+
+bool in_period(Time t,Period p){
+	switch(p){
+		case Period::AUTO:
+			return t>=0 && t<=15;
+		case Period::TELE_MAIN:
+			//for our purposes, we're saying endgame is last 20 seconds.
+			return t>=15 && t<=150-20;
+		case Period::ENDGAME:
+			return t>=150-20;
+		default:
+			assert(0);
+	}
+}
+
+template<typename T>
+vector<optional<T>> to_optionals(vector<T> const& a){
+	return mapf([](auto x){ return std::optional<T>{x}; },a);
+}
+
+tba::Zebra_team to_zebra_team(vector<pair<double,double>> const& a){
+	return tba::Zebra_team{
+		tba::Team_key{"frc1"},//obviously this is ficticous.
+		to_optionals(firsts(a)),
+		to_optionals(seconds(a))
+	};
+}
+
+void graph(
+	std::vector<double> times,
+	std::vector<tba::Zebra_team> const& data,
+	std::optional<Display_style> const& display_style,
+	std::optional<Period> const& period,
+	std::string const& name
+){
+	vector<vector<Datapoint>> dp;
+
+	for(auto line:data){
+		vector<Datapoint> line_out;
+		for(auto [t,x,y]:zip(times,line.xs,line.ys)){
+			if(x){
+				assert(y);
+				line_out|=make_pair(t,make_pair(*x,*y));
+			}
+		}
+		dp.push_back(line_out);
+	}
+	
+	for(auto period_now:periods(period)){
+		auto f=mapf(
+			[=](auto x){
+				return filter(
+					[=](auto p){ return in_period(p.first,period_now); },
+					x
+				);
+			},
+			dp
+		);
+
+		for(auto style:styles(display_style)){
+			switch(style){
+				case Display_style::HEAT:{
+					//void heatmap(std::function<double(int,int)> density,std::string name){
+					map<pair<int,int>,int> m;
+					for(auto elem:flatten(f)){
+						m[elem.second]++;
+					}
+					heatmap([&](int x,int y){ return m[make_pair(x,y)]; },name+"_"+as_string(period_now));
+					break;
+				}
+				case Display_style::LINE:
+					plot(
+						//to_zebra_team(seconds(f)),
+						mapf([](auto x){ return to_zebra_team(seconds(x)); },f),
+						name+"_"+as_string(period_now)+"_"+as_string(style)
+					);
+					break;
+				default:
+					assert(0);
+			}
+		}
+	}
+}
+
+void team_plain(tba::Cached_fetcher &cf,Team team,Args args){
+	static const auto YEAR=tba::Year{2020};
+	auto d=mapf(
+		[&](auto k){
+			return zebra_motionworks(cf,k);
+		},
+		team_matches_year_keys(cf,to_team_key(team),YEAR)
+	);
+	auto f=filter([](auto x){ return x; },d);
+	if(f.empty()){
+		cout<<"No data for team:"<<team<<"\n";
+		return;
+	}
+	graph(
+		f[0]->times,
+		mapf(
+			[&](auto x)->tba::Zebra_team{
+				return find_team(team,*x);
+			},
+			f
+		),
+		args.style,
+		args.period,
+		as_string(team)
+	);
+}
+
 int main1(int argc,char **argv){
 	auto args=parse_args(argc,argv);
 	std::ifstream f("../tba/auth_key");
@@ -372,8 +730,83 @@ int main1(int argc,char **argv){
 	getline(f,tba_key);
 	tba::Cached_fetcher cf{tba::Fetcher{tba::Nonempty_string{tba_key}},tba::Cache{}};
 	static const auto YEAR=tba::Year{2020};
+	//indenpendent: heat period
+	//team match event
+	//
+	if(args.team){
+		if(args.match){
+			//show how that team did in that match
+			auto z=zebra_motionworks(cf,*args.match);
+			if(!z){
+				cout<<"Data not found.\n";
+				return 1;
+			}
+			graph(
+				z->times,
+				{find_team(*args.team,*z)},
+				args.style,
+				args.period,
+				as_string(args.team)+"_"+as_string(args.match)
+			);
+			return 0;
+		}else if(args.event){
+			//how that team did at that event
+			auto tm=team_event_matches(cf,to_team_key(*args.team),*args.event);
+			auto k=mapf(
+				[&](auto x){
+					return zebra_motionworks(cf,tba::Match_key{x.key});
+				},
+				tm
+			);
+			auto f=filter([](auto x){ return x; },k);
+			assert(f.size());
+			graph(
+				f[0]->times,
+				mapf(
+					[&](auto x)->tba::Zebra_team{
+						return find_team(*args.team,*x);
+					},
+					f
+				),
+				args.style,
+				args.period,
+				as_string(args.team)+"_"+as_string(args.event)
+			);
+			return 0;
+		}
+		team_plain(cf,*args.team,args);
+		return 0;
+	}
+	if(args.match){
+		//all teams in this match
+		//at some point, will want to add labels for which line is which
+		auto z=zebra_motionworks(cf,*args.match);
+		if(!z){
+			cout<<"Could not find data for that match.\n";
+			exit(1);
+		}
+		graph(z->times,all_teams(*z),args.style,args.period,as_string(args.match));
+		return 0;
+	}else if(args.event){
+		//all teams scheduled to be at this event
+		auto teams=event_teams_keys(cf,*args.event);
+		for(auto team:teams){
+			team_plain(cf,to_team(team),args);
+		}
+		return 0;
+	}
+	help();
+
+	nyi
+	/*
+	 * styles of displays:
+	 * heat/line
+	 * how many lines/robots to show at once
+	 * the option of single display vs many: always do both?
+	 * */
 
 	auto e=event_teams_keys(cf,tba::Event_key{"2020orwil"});
+	find_tall_bots(cf);
 
 	for(auto t:e){
 		std::vector<tba::Zebra_team> paths;
@@ -404,7 +837,8 @@ int main1(int argc,char **argv){
 		}
 	}
 
-	auto matches=team_matches_year_keys(cf,to_team_key(args.team),YEAR);
+	assert(args.team);
+	auto matches=team_matches_year_keys(cf,to_team_key(*args.team),YEAR);
 	//matches={tba::Match_key{"2020orore_f1m1"}};
 
 	vector<tba::Zebra_team> paths;
@@ -424,21 +858,19 @@ int main1(int argc,char **argv){
 			}
 			assert(0);
 		};*/
-		auto p=find_team(args.team,*data);
+		auto p=find_team(*args.team,*data);
 		plot(p,match_key.get());
 		paths|=p;
 
 		largest_jump(data->times,p,match_key.get());
 		//cout<<largest_jump(data->times,p)<<"\n";
 
-		//TODO: Normalize alliance
 		//TODO: Make it so that can recognize trench bots
 		//Measure top speeds for different robots
-		//Measure fastest speed for a robot to have netted a certain distance
-		//Look for outliers in the data to see what the worst jumpiness is
-		//(difference in location in a single timestep)
 		//Look at where the starting locations are to see where like to line up
 		//Put in heat charts for auto vs tele
+		//Make charts show auto lines w/ markers for start & end
+		//Histogram of how fast robots are instantaneously moving
 	}
 
 	plot(paths);
@@ -470,6 +902,9 @@ int main(int argc,char **argv){
 		return main1(argc,argv);
 	}catch(tba::Decode_error const& a){
 		cout<<"Caught: "<<a<<"\n";
+		return 1;
+	}catch(std::string const& s){
+		cout<<s<<"\n";
 		return 1;
 	}
 }
