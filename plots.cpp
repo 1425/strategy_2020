@@ -10,6 +10,8 @@
 
 using namespace std;
 
+//start generic code
+
 template<typename T>
 std::vector<T> operator|(vector<T> const& a,vector<T> const& b){
 	std::vector<T> r;
@@ -34,8 +36,139 @@ vector<T> flatten(std::vector<std::vector<T>> const& a){
 	return r;
 }
 
-//Given a team at an event, draw all of the charts for the matches that they have played so far
-//After that works, rotate based on the alliance that they had been on at the time
+template<typename K,typename V>
+vector<V> seconds(map<K,V> const& a){
+	return mapf([](auto p){ return p.second; },a);
+}
+
+template<typename Func>
+std::map<std::pair<int,int>,double> normalize(Func f){
+	std::map<std::pair<int,int>,size_t> m;
+	for(auto x:range(52)){
+		for(auto y:range(27)){
+			m[std::make_pair(x,y)]=f(x,y);
+		}
+	}
+	auto total=sum(seconds(m));
+	return map_values(
+		[=](auto v){
+			return (0.0+v)/total;
+		},
+		m
+	);
+}
+
+template<typename Func,typename T>
+size_t count(Func f,T const& t){
+	size_t r=0;
+	for(auto elem:t){
+		if(f(elem)){
+			r++;
+		}
+	}
+	return r;
+}
+
+template<typename A,typename B>
+std::vector<std::pair<B,A>> swap_pairs(std::vector<std::pair<A,B>> const& a){
+	return mapf([](auto p){ return make_pair(p.second,p.first); },a);
+}
+
+template<typename T>
+std::vector<std::pair<T,T>> pick_stride(unsigned stride,std::vector<T> const& a){
+	//get all of the combinations that are a certain distance from each other.
+	std::vector<std::pair<T,T>> r;
+	for(size_t i=0;i+stride<a.size();i++){
+		r|=make_pair(a[i],a[i+stride]);
+	}
+	return r;
+}
+
+template<typename A,typename B>
+B max_seconds(std::vector<std::pair<A,B>> const& a){
+	assert(a.size());
+	B r=a[0].second;
+	for(auto const& elem:a){
+		r=max(r,elem.second);
+	}
+	return r;
+}
+
+template<typename Func>
+auto mapf(Func f,std::string const& s){
+	vector<ELEM(s)> r;
+	for(auto elem:s){
+		r|=f(elem);
+	}
+	return r;
+}
+
+string str(vector<char> v){
+	stringstream ss;
+	for(auto c:v){
+		ss<<c;
+	}
+	return ss.str();
+}
+
+string to_caps(string const& s){
+	//MAP(toupper,s);
+	return str(mapf([](auto c)->char{ return toupper(c); },s));
+}
+
+template<typename T>
+vector<optional<T>> to_optionals(vector<T> const& a){
+	return mapf([](auto x){ return std::optional<T>{x}; },a);
+}
+
+//start program-specific code
+
+#define PERIOD_OPTIONS(X)\
+	X(AUTO)\
+	X(TELE_MAIN)\
+	X(ENDGAME)
+
+enum class Period{
+	#define X(A) A,
+	PERIOD_OPTIONS(X)
+	#undef X
+};
+
+std::ostream& operator<<(std::ostream& o,Period a){
+	#define X(A) if(a==Period::A) return o<<""#A;
+	PERIOD_OPTIONS(X)
+	#undef X
+	assert(0);
+}
+
+std::vector<Period> options(Period const*){
+	return vector{
+		#define X(A) Period::A,
+		PERIOD_OPTIONS(X)
+		#undef X
+	};
+}
+
+vector<Period> periods(std::optional<Period> const& a){
+	if(a) return {*a};
+	return options((Period*)0);
+}
+
+using Time=double;//# of seconds
+
+bool in_period(Time t,Period p){
+	switch(p){
+		case Period::AUTO:
+			return t>=0 && t<=15;
+		case Period::TELE_MAIN:
+			//for our purposes, we're saying endgame is last 20 seconds.
+			return t>=15 && t<=150-20;
+		case Period::ENDGAME:
+			return t>=150-20;
+		default:
+			assert(0);
+	}
+}
 
 void plot(std::vector<tba::Zebra_team> const& data,string name="all"){
 	//This is going to feed the data out to python for the plotting.
@@ -135,18 +268,7 @@ std::pair<Range,Range> limits(std::vector<tba::Zebra_team> const& v){
 }
 
 using Point=std::pair<double,double>;
-using Time=double;
 using Datapoint=std::pair<Time,Point>;
-
-template<typename T>
-std::vector<std::pair<T,T>> pick_stride(unsigned stride,std::vector<T> const& a){
-	//get all of the combinations that are a certain distance from each other.
-	std::vector<std::pair<T,T>> r;
-	for(size_t i=0;i+stride<a.size();i++){
-		r|=make_pair(a[i],a[i+stride]);
-	}
-	return r;
-}
 
 void heatmap(std::function<double(int,int)> density,std::string name){
 	auto p=fork();
@@ -172,7 +294,8 @@ void heatmap(std::function<double(int,int)> density,std::string name){
 		for(auto y:range(HEIGHT)){
 			f<<"\t[";
 			for(auto x:range(WIDTH)){
-				auto v=min(50,density(x,27-y));
+				//auto v=min(50,density(x,27-y));
+				auto v=density(x,27-y);
 				f<<v<<",";
 			}
 			f<<"\t],\n";
@@ -190,16 +313,6 @@ void heatmap(std::function<double(int,int)> density,std::string name){
 	auto r=system((string()+"python "+plotfile).c_str());
 	assert(r==0);
 	exit(0);
-}
-
-template<typename A,typename B>
-B max_seconds(std::vector<std::pair<A,B>> const& a){
-	assert(a.size());
-	B r=a[0].second;
-	for(auto const& elem:a){
-		r=max(r,elem.second);
-	}
-	return r;
 }
 
 void largest_jump(std::vector<double> const& time,tba::Zebra_team const& a,std::string const& name){
@@ -366,6 +479,16 @@ bool in_own_trench(Point p){
 	return x>=19 && x<=23 && y>=0 && y<=5;
 }
 
+bool in_own_trench_entrance(Point p){
+	auto [x,y]=p;
+	return x>=19 && x<21 && y>=0 && y<=5;
+}
+
+bool in_own_trench_exit(Point p){
+	auto [x,y]=p;
+	return x>=21 && x<=23 && y>=0 && y<=5;
+}
+
 vector<Point> to_points(tba::Zebra_team const& a){
 	vector<Point> r;
 	for(auto [x,y]:zip(a.xs,a.ys)){
@@ -377,25 +500,177 @@ vector<Point> to_points(tba::Zebra_team const& a){
 	return r;
 }
 
-template<typename Func,typename T>
-size_t count(Func f,T const& t){
-	size_t r=0;
-	for(auto elem:t){
-		if(f(elem)){
-			r++;
+map<pair<int,int>,unsigned> layout(){
+	nyi
+}
+
+auto YEAR=tba::Year{2020};
+
+static const int WIDTH=52;
+static const int HEIGHT=30;
+
+//using Heatmap=std::array<std::array<int,WIDTH>,HEIGHT>;
+
+template<typename Func,typename K,typename V>
+auto map_keys(Func f,std::map<K,V> const& a){
+	std::map<K,decltype(f(a.begin()->second))> r;
+	for(auto [k,v]:a){
+		r[k]=f(v);
+	}
+	return r;
+}
+
+template<typename K,typename V>
+map<K,V> operator-(std::map<K,V> const& a,std::map<K,V> const& b){
+	map<K,V> r;
+	for(auto k:keys(a)|keys(b)){
+		auto get=[k](std::map<K,V> const& m){
+			auto f=m.find(k);
+			if(f==m.end()) return V{};
+			return f->second;
+		};
+		r[k]=get(a)-get(b);
+	}
+	return r;
+}
+
+void heatmap(std::map<pair<int,int>,double> const& data,std::string const& name){
+	heatmap(
+		[&](int x,int y){
+			auto pt=make_pair(x,y);
+			auto f=data.find(pt);
+			if(f==data.end()){
+				return 0.0;
+			}
+			return f->second;
+		},
+		name
+	);
+}
+
+void study_deviation(tba::Cached_fetcher &f,Period period){
+	auto e=event_teams_keys(f,tba::Event_key{"2020orwil"});
+	using M=map<pair<int,int>,size_t>;
+	M found;
+	map<Team,M> by_team;
+	for(auto team:e){
+		for(auto match_key:team_matches_year_keys(f,team,YEAR)){
+			auto data=zebra_motionworks(f,match_key);
+			if(data){
+				auto path=find_team(to_team(team),*data);
+				for(auto [t,x,y]:zip(data->times,path.xs,path.ys)){
+					if(in_period(t,period) && x){
+						auto pt=make_pair(int(*x),int(*y));
+						found[pt]++;
+						by_team[to_team(team)][pt]++;
+					}
+				}
+			}
+		}
+	}
+	heatmap([&](int x,int y){ return found[make_pair(x,y)]; },"all");
+	
+	auto n=normalize(
+		[&](int x,int y){ return found[make_pair(x,y)]; }
+	);
+
+	//first, just consider each individual spot as totally independent
+	//and just sum up the difference for each of them
+	//would get cleaner results if were doing some sort standard filter over an area
+	auto by_team_n=map_keys(
+		[&](M m){
+			return normalize([&](int x,int y){ return m[make_pair(x,y)]; });
+		},
+		by_team
+	);
+
+	for(auto [team,tn]:by_team_n){
+		auto diff=tn-n;
+		heatmap(diff,"diff_"+as_string(team)+"_"+as_string(period));
+	}
+}
+
+void study_deviation(tba::Cached_fetcher &f){
+	for(auto period:options((Period*)0)){
+		study_deviation(f,period);
+	}
+}
+
+template<typename T>
+std::vector<std::pair<T,T>> adjacent_pairs(std::vector<T> const& a){
+	std::vector<std::pair<T,T>> r;
+	if(a.size()){
+		for(auto i:range(a.size()-1)){
+			r|=std::make_pair(a[i],a[i+1]);
 		}
 	}
 	return r;
 }
 
-template<typename A,typename B>
-std::vector<std::pair<B,A>> swap_pairs(std::vector<std::pair<A,B>> const& a){
-	return mapf([](auto p){ return make_pair(p.second,p.first); },a);
+int find_thru(vector<Point> const& a){
+	return count(
+		[](auto p){
+			/*auto a=in_own_trench(p.first);
+			auto a1=in_own_trench_entrance(p.first);
+			auto a2=in_own_trench_exit(p.first);
+			assert(!(a1 && a2));
+			if(a){
+				if( !(a1 || a2) ){
+					PRINT(a);
+					PRINT(a1);
+					PRINT(a2);
+				}
+				assert(a1 || a2);
+			}else{
+				assert(!a1 && !a2);
+			}
+
+			auto b=in_own_trench(p.second);
+			auto b1=in_own_trench_entrance(p.second);
+			auto b2=in_own_trench_exit(p.second);
+			*/
+			//if(a1 && b2)nyi
+			//if(a2 && b1)nyi
+
+			//(void)b;
+			//if(a || b)nyi
+			auto fwd=in_own_trench_entrance(p.first) && in_own_trench_exit(p.second);
+			auto rev=in_own_trench_entrance(p.second) && in_own_trench_exit(p.first);
+			//if(fwd)nyi
+			//if(rev)nyi
+			return fwd || rev;
+		},
+		adjacent_pairs(a)
+	);
+}
+
+template<typename K,typename V>
+std::vector<std::pair<K,V>> to_pairs(std::map<K,V> const& a){
+	std::vector<std::pair<K,V>> r;
+	for(auto p:a) r|=p;
+	return r;
 }
 
 void find_tall_bots(tba::Cached_fetcher &f){
+	//initial algorithm:
+	//see if in certain region of the field
+	//advanced algorithm:
+	//see when they actually make it through, rather than getting stuck in there
+	//because we pushed them in
+	//
+	//interesting experiment:
+	//look at the overall heat map of all robots
+	//and highlight how robots deviate from that
+	//
+	//look at know tall bots and see where they don't go ever
+	//
+	//try to get direction of travel info?
+	//to try to say who is being defended, or to say 
+	
 	auto e=event_teams_keys(f,tba::Event_key{"2020orwil"});
 	map<Team,double> m;
+	map<Team,double> thru_by_team;//per match
+
 	for(auto team:e){
 		std::vector<tba::Zebra_team> paths;
 		static const auto YEAR=tba::Year{2020};
@@ -407,6 +682,25 @@ void find_tall_bots(tba::Cached_fetcher &f){
 		}
 		auto pts=flatten(mapf(to_points,paths));
 		auto c=count(in_own_trench,pts);
+
+		if(pts.size()){
+			int thrus=find_thru(pts);
+			thru_by_team[to_team(team)]=(0.0+thrus)/paths.size();
+			static const int SHOW_MATCHES=0;
+			if(thrus && SHOW_MATCHES){
+				for(auto match_key:team_matches_year_keys(f,team,YEAR)){
+					auto data=zebra_motionworks(f,match_key);
+					if(data){
+						auto path=find_team(to_team(team),*data);
+						int thrus=find_thru(to_points(path));
+						if(thrus){
+							cout<<team<<"\t"<<match_key<<"\t"<<thrus<<"\n";
+						}
+					}
+				}
+			}
+		}
+
 		/*PRINT(team);
 		PRINT(c);
 		PRINT(pts.size());*/
@@ -415,34 +709,10 @@ void find_tall_bots(tba::Cached_fetcher &f){
 		}
 	}
 	//print_lines(m);
-	print_lines(sorted(swap_pairs(to_vec(m))));
-	nyi
-}
-
-#define PERIOD_OPTIONS(X)\
-	X(AUTO)\
-	X(TELE_MAIN)\
-	X(ENDGAME)
-
-enum class Period{
-	#define X(A) A,
-	PERIOD_OPTIONS(X)
-	#undef X
-};
-
-std::ostream& operator<<(std::ostream& o,Period a){
-	#define X(A) if(a==Period::A) return o<<""#A;
-	PERIOD_OPTIONS(X)
-	#undef X
-	assert(0);
-}
-
-std::vector<Period> options(Period const*){
-	return vector{
-		#define X(A) Period::A,
-		PERIOD_OPTIONS(X)
-		#undef X
-	};
+	//print_lines(sorted(swap_pairs(to_vec(m))));
+	//nyi
+	cout<<"Number of times under own trench per match:\n";
+	print_lines(sorted(swap_pairs(to_pairs(thru_by_team))));	
 }
 
 #define DISPLAY_STYLE(X)\
@@ -487,11 +757,21 @@ vector<tba::Event_key> options(tba::Event_key const*){
 	X(optional<tba::Match_key>,match)\
 	X(optional<Display_style>,style)\
 	X(optional<Period>,period)\
-	X(optional<tba::Event_key>,event)
+	X(optional<tba::Event_key>,event)\
+	X(bool,demo)\
+	X(bool,heat_diff)\
 
 struct Args{
 	ARGS_ITEMS(INST)
 };
+
+std::ostream& operator<<(std::ostream& o,Args const& a){
+	o<<"Args(";
+	#define X(A,B) o<<""#B<<":"<<a.B<<" ";
+	ARGS_ITEMS(X)
+	#undef X
+	return o<<")";
+}
 
 Team parse(string,Team const*)nyi
 
@@ -523,37 +803,9 @@ Period parse(const char *s,Period const *x){
 	throw ss.str();
 }
 
-/*template<typename T>
-T parse(char*,T const* x){
-	cout<<decltype(x)<<"\n";
-	nyi
-}*/
-
 template<typename T>
 T parse(char *s,optional<T> const*){
 	return parse(s,(T*)0);
-}
-
-template<typename Func>
-auto mapf(Func f,std::string const& s){
-	vector<ELEM(s)> r;
-	for(auto elem:s){
-		r|=f(elem);
-	}
-	return r;
-}
-
-string str(vector<char> v){
-	stringstream ss;
-	for(auto c:v){
-		ss<<c;
-	}
-	return ss.str();
-}
-
-string to_caps(string const& s){
-	//MAP(toupper,s);
-	return str(mapf([](auto c)->char{ return toupper(c); },s));
 }
 
 vector<tba::Match_key> options(tba::Match_key const*){
@@ -564,6 +816,14 @@ vector<tba::Match_key> options(tba::Match_key const*){
 template<typename T>
 vector<T> options(optional<T> const*){
 	return options((T*)0);
+}
+
+vector<bool> options(bool const*){
+	return {0,1};
+}
+
+bool parse(char const *s,bool const*){
+	return atoi(s);
 }
 
 void help(){
@@ -579,7 +839,7 @@ void help(){
 
 Args parse_args(int argc,char **argv){
 	(void)argc;
-	Args r;
+	Args r{};
 	for(int i=1;argv[i];i++){
 		#define X(A,B) if(argv[i]==string("--"#B)){\
 			i++;\
@@ -606,30 +866,6 @@ Args parse_args(int argc,char **argv){
 vector<Display_style> styles(std::optional<Display_style> const& a){
 	if(a) return {*a};
 	return options((Display_style*)0);
-}
-
-vector<Period> periods(std::optional<Period> const& a){
-	if(a) return {*a};
-	return options((Period*)0);
-}
-
-bool in_period(Time t,Period p){
-	switch(p){
-		case Period::AUTO:
-			return t>=0 && t<=15;
-		case Period::TELE_MAIN:
-			//for our purposes, we're saying endgame is last 20 seconds.
-			return t>=15 && t<=150-20;
-		case Period::ENDGAME:
-			return t>=150-20;
-		default:
-			assert(0);
-	}
-}
-
-template<typename T>
-vector<optional<T>> to_optionals(vector<T> const& a){
-	return mapf([](auto x){ return std::optional<T>{x}; },a);
 }
 
 tba::Zebra_team to_zebra_team(vector<pair<double,double>> const& a){
@@ -723,6 +959,11 @@ void team_plain(tba::Cached_fetcher &cf,Team team,Args args){
 	);
 }
 
+int demo(tba::Cached_fetcher &cf){
+	find_tall_bots(cf);
+	return 0;
+}
+
 int main1(int argc,char **argv){
 	auto args=parse_args(argc,argv);
 	std::ifstream f("../tba/auth_key");
@@ -733,6 +974,14 @@ int main1(int argc,char **argv){
 	//indenpendent: heat period
 	//team match event
 	//
+	if(args.demo){
+		return demo(cf);
+	}
+	if(args.heat_diff){
+		study_deviation(cf);
+		return 0;
+	}
+
 	if(args.team){
 		if(args.match){
 			//show how that team did in that match
