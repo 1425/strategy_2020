@@ -959,8 +959,161 @@ void team_plain(tba::Cached_fetcher &cf,Team team,Args args){
 	);
 }
 
+void show_points(std::vector<Point> const& a){
+	string plotter_name="plotter_pt.py";
+	{
+		ofstream f(plotter_name.c_str());
+		f<<"import numpy as np\n";
+		f<<"import matplotlib.pyplot as plt\n";
+		//f<<"#a:"<<a<<"\n";
+		/*for(auto a:data){
+			f<<"xs=[]\n";
+			auto python_literal=[](optional<double> x)->string{
+				if(!x){
+					return "None";
+				}
+				return as_string(x);
+			};
+			for(auto elem:a.xs){
+				f<<"xs.append("<<python_literal(elem)<<")\n";
+			}
+			f<<"ys=[]\n";
+			for(auto elem:a.ys){
+				f<<"ys.append("<<python_literal(elem)<<")\n";
+			}
+			f<<"plt.plot(xs,ys)\n";
+		}*/
+		for(auto [x,y]:a){
+			f<<"plt.plot(["<<x<<"],["<<y<<"])\n";
+		}
+
+		f<<"plt.savefig(\"points.png\")\n";
+	}
+
+	//pid_t p=fork();
+	//if(p==0){
+		auto r=system( ("python "+plotter_name).c_str() );
+		assert(r==0);
+	//	exit(0);
+	//}
+}
+
+std::map<Team,bool> defense(std::map<bool,std::map<Team,Point>> a){
+	//first, consider defense that might be played by the red team
+	//second, consider defense that might be played by the blue team
+	
+	for(auto defender:a[0]){
+		PRINT(defender);
+		for(auto opponent:a[1]){
+			PRINT(opponent);
+			vector<Point> points{
+				defender.second,
+				opponent.second
+			};
+			show_points(points);
+			nyi
+		}
+	}
+	nyi
+}
+
+map<Team,Time> recognize_defense(tba::Cached_fetcher &f,tba::Match_key match){
+	//first thing to do: amount of defense played
+	//second thing to do: how effective was the defense?
+	//third thing to do: how good is a robot depending on whether or not it was defended?
+
+	//own output port
+	//on the wall: x=2, y=4
+
+	//opposing output port
+	//a little bit out: x=41, y=22
+
+	//opponents' goal
+	//x: 5-11
+	//y: 13+	
+
+	//own goal:x=52,y=7
+	
+	//getting through the middle, if the defended is a tall bot (and not endgame, etc.)
+	
+	//using Timepoint=tuple<std::vector<std::vector<Point>>,std::vector<std::vector<Point>>>;
+	//first, just analyze individual positioning
+	//worry about how people are moving later
+	
+	auto z=zebra_motionworks(f,match);
+	if(!z) return {};
+
+	std::vector<map<bool,map<Team,Point>>> points;
+
+	for(auto [i,t]:enumerate(z->times)){
+		(void)t;
+		map<bool,map<Team,Point>> locations;
+		auto get_points=[i](std::vector<tba::Zebra_team> const& v){
+			std::map<Team,Point> r;
+			for(auto a:v){
+				assert(i<a.xs.size());
+				assert(i<a.ys.size());
+				auto x=a.xs[i];
+				auto y=a.ys[i];
+				if(x){
+					assert(y);
+					r[to_team(a.team_key)]=make_pair(*x,*y);
+				}
+			}
+			return r;
+		};
+		locations[0]=get_points(z->alliances.red);
+		locations[1]=get_points(z->alliances.blue);
+		//PRINT(locations);
+		points|=locations;
+	}
+
+	mapf(defense,points);
+	nyi
+}
+
+void recognize_defense(tba::Cached_fetcher &f){
+	mapf(
+		[&](auto x){ return recognize_defense(f,tba::Match_key{x.key}); },
+		event_matches(f,tba::Event_key{"2020orore"})
+	);
+}
+
+template<typename K,typename V>
+void print_n(map<K,V> const& a){
+	for(auto [k,v]:a){
+		cout<<k<<" ("<<v.size()<<")\n";
+		cout<<"\t"<<v<<"\n";
+	}
+}
+
+void show_events(tba::Cached_fetcher &f){
+	auto teams=district_teams_keys(f,tba::District_key{"2020pnw"});
+	PRINT(teams)
+
+	map<set<tba::Event_key>,vector<Team>> r;
+	for(auto team:teams){
+		auto e=team_events_year_keys(f,team,YEAR);
+		auto s=to_set(e);
+		s-=tba::Event_key{"2020waahs"};
+		r[s]|=to_team(team);
+	}
+	print_n(r);
+	//print_r(r);
+
+	map<int,vector<Team>> num;
+	for(auto [k,v]:r){
+		num[k.size()]|=v;
+	}
+	//print_r(num);
+	print_n(num);
+}
+
 int demo(tba::Cached_fetcher &cf){
-	find_tall_bots(cf);
+	//recognize_defense(cf);
+	//find_tall_bots(cf);
+	show_events(cf);
+
 	return 0;
 }
 
