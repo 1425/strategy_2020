@@ -13,14 +13,6 @@ using namespace std;
 //start generic code
 
 template<typename T>
-std::vector<T> operator|(vector<T> const& a,vector<T> const& b){
-	std::vector<T> r;
-	r|=a;
-	r|=b;
-	return r;
-}
-
-template<typename T>
 T median(std::vector<T> const& a){
 	assert(a.size());
 	auto b=sorted(a);
@@ -67,11 +59,6 @@ size_t count(Func f,T const& t){
 		}
 	}
 	return r;
-}
-
-template<typename A,typename B>
-std::vector<std::pair<B,A>> swap_pairs(std::vector<std::pair<A,B>> const& a){
-	return mapf([](auto p){ return make_pair(p.second,p.first); },a);
 }
 
 template<typename T>

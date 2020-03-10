@@ -33,6 +33,8 @@ viper_test:
 plots: ../tba/db.o plots.o ../tba/data.o ../tba/rapidjson.o ../tba/curl.o util.o
 	$(CXX) $(CXXFLAGS) $^ -lsqlite3 -lcurl -o $@
 
+opr: qr_solve.o r8lib.o input_data.o
+
 .PHONY: clean
 clean:
 	rm -f *.o *.png plot*.py

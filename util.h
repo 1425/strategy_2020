@@ -914,4 +914,17 @@ std::ostream& operator<<(std::ostream& o,std::variant<A...> const& a){
         return o;
 }
 
+template<typename A,typename B>
+std::vector<std::pair<B,A>> swap_pairs(std::vector<std::pair<A,B>> const& a){
+	return mapf([](auto p){ return std::make_pair(p.second,p.first); },a);
+}
+
+template<typename T>
+std::vector<T> operator|(std::vector<T> const& a,std::vector<T> const& b){
+	std::vector<T> r;
+	r|=a;
+	r|=b;
+	return r;
+}
+
 #endif
